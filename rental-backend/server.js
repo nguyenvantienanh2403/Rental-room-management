@@ -1,10 +1,16 @@
-import express from "express";
-import dotenv from "dotenv";
+import app from "./src/app.js";
+import env from "./src/config/env.config.js";
+import connectDB from "./src/config/database.js";
 
-dotenv.config();
-const app = express();
-const PORT = process.env.PORT || 5001;
+const PORT = env.server.port;
 
-app.listen(PORT, () => {
-  console.log(`Server is running on ${PORT}`);
-});
+connectDB()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  })
+  .catch(() => {
+    console.error("Failed to connect to the database. Server not started.");
+    process.exit(1);
+  });
