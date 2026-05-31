@@ -1,4 +1,4 @@
-import { statusCodes } from "http-status-code";
+import { StatusCodes } from "http-status-codes";
 import { ApiError, catchAsync } from "../utils/index.js";
 
 const checkPermission = (requiredPermissions) => {
@@ -7,7 +7,7 @@ const checkPermission = (requiredPermissions) => {
 
     if (!userPermissions.includes(requiredPermissions)) {
       throw new ApiError(
-        statusCodes.FORBIDDEN,
+        StatusCodes.FORBIDDEN,
         "You do not have permission to perform this action",
       );
     }

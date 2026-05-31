@@ -1,7 +1,7 @@
 import mongoose, { Schema, model } from "mongoose";
-import slug from "mongoose-slug-generator";
+// import slug from "mongoose-slug-generator";
 
-mongoose.plugin(slug);
+// mongoose.plugin(slug);
 
 const userSchema = new Schema(
   {
@@ -22,10 +22,10 @@ const userSchema = new Schema(
     avatar: {
       type: String,
     },
-    slug: {
-      type: String,
-      slug: "username",
-    },
+    // slug: {
+    //   type: String,
+    //   slug: "username",
+    // },
     status: {
       type: String,
       enum: ["active", "inactive"],

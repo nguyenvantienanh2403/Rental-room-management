@@ -30,3 +30,5 @@ export const buildQueryOptions = (keyword, sortBy, sortOrder) => {
 
   return { filter, sort };
 };
+
+export default buildQueryOptions;

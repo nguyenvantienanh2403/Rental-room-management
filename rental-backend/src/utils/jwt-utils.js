@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import env from "../../config/env.js";
+import env from "../config/env.config.js";
 
 //Lấy token từ header Authorization
 const extractToken = (req) => {
@@ -13,8 +13,7 @@ const extractToken = (req) => {
 
 // Tạo access token
 const generateAccessToken = (UserId) => {
-  const payload = { UserId };
-
+  const payload = { id: UserId };
   const token = jwt.sign(payload, env.jwt.accessTokenSecret, {
     expiresIn: env.jwt.accessTokenExpiresIn,
   });
@@ -24,7 +23,7 @@ const generateAccessToken = (UserId) => {
 
 // Tạo refresh token
 const generateRefreshToken = (UserId) => {
-  const payload = { UserId };
+  const payload = { id: UserId };
 
   const token = jwt.sign(payload, env.jwt.refreshTokenSecret, {
     expiresIn: env.jwt.refreshTokenExpiresIn,
@@ -45,7 +44,7 @@ const verifyRefreshToken = (token) => {
   return decoded;
 };
 
-export {
+export default {
   extractToken,
   generateAccessToken,
   generateRefreshToken,
