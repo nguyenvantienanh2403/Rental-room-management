@@ -1,5 +1,6 @@
 import { userValidation } from "./user.validation.js";
 import { buildingValidation } from "./building.validation.js";
 import { roomValidation } from "./room.validation.js";
+import { tenantValidation } from "./tenant.validation.js";
 
-export { userValidation, buildingValidation, roomValidation };
+export { userValidation, buildingValidation, roomValidation, tenantValidation };

@@ -4,5 +4,6 @@ import userModel from "./user.model.js";
 import token from "./token.model.js";
 import buildingModel from "./building.model.js";
 import roomModel from "./room.model.js";
+import tenantModel from "./tenant.model.js";
 
-export { permissionModel, roleModel, userModel, token, buildingModel, roomModel };
+export { permissionModel, roleModel, userModel, token, buildingModel, roomModel, tenantModel };
