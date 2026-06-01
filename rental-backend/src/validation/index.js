@@ -1,4 +1,5 @@
 import { userValidation } from "./user.validation.js";
 import { buildingValidation } from "./building.validation.js";
+import { roomValidation } from "./room.validation.js";
 
-export { userValidation, buildingValidation };
+export { userValidation, buildingValidation, roomValidation };
