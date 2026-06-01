@@ -1,3 +1,6 @@
 import * as authService from "./auth.service.js";
+import * as userService from "./user.service.js";
+import * as uploadService from "./upload.service.js";
+import * as buildingService from "./building.service.js";
 
-export { authService };
+export { authService, userService, uploadService, buildingService };

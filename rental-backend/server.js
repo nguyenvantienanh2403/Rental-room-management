@@ -3,7 +3,7 @@ import env from "./src/config/env.config.js";
 import connectDB from "./src/config/database.js";
 
 const PORT = env.server.port;
-
+console.log(env.cloudinary);
 connectDB()
   .then(() => {
     app.listen(PORT, () => {

@@ -1,6 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 import { ApiError, respone, jwt_utils } from "../utils/index.js";
-import { userModel, token } from "../models/index.js";
+import { userModel, roleModel, token } from "../models/index.js";
 import bcrypt from "bcrypt";
 import env from "../config/env.config.js";
 
@@ -10,11 +10,21 @@ const registerService = async (userData) => {
   if (existingUser) {
     throw new ApiError(StatusCodes.BAD_REQUEST, "Email already in use");
   }
+
+  const defaultRole = await roleModel.findOne({ name: "User" });
+  if (!defaultRole) {
+    throw new ApiError(
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      "Default role 'User' is not configured",
+    );
+  }
+
   const hashedPassword = await bcrypt.hash(password, env.BCRYPT_SALT_ROUNDS);
   const newUser = await userModel.create({
     username,
     email,
     password: hashedPassword,
+    role: defaultRole._id,
   });
   return respone(StatusCodes.CREATED, "User registered successfully", {
     userId: newUser._id,
@@ -24,7 +34,7 @@ const registerService = async (userData) => {
 };
 
 const loginService = async (email, password, res) => {
-  const user = await userModel.findOne({ email });
+  const user = await userModel.findOne({ email }).populate("role");
   if (!user) {
     throw new ApiError(StatusCodes.UNAUTHORIZED, "Invalid email or password");
   }

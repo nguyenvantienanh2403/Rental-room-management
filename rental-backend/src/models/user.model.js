@@ -1,7 +1,7 @@
 import mongoose, { Schema, model } from "mongoose";
-// import slug from "mongoose-slug-generator";
+import mongooseSlugUpdater from "mongoose-slug-updater";
 
-// mongoose.plugin(slug);
+mongoose.plugin(mongooseSlugUpdater);
 
 const userSchema = new Schema(
   {
@@ -22,10 +22,17 @@ const userSchema = new Schema(
     avatar: {
       type: String,
     },
-    // slug: {
-    //   type: String,
-    //   slug: "username",
-    // },
+    slug: {
+      type: String,
+      slug: "username",
+      unique: true,
+      slugPaddingSize: 2,
+    },
+    role: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Role",
+      required: true,
+    },
     status: {
       type: String,
       enum: ["active", "inactive"],

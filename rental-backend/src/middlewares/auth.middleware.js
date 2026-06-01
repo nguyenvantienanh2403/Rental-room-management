@@ -17,7 +17,13 @@ const authMiddleware = catchAsync(async (req, res, next) => {
     }
     throw new ApiError(StatusCodes.UNAUTHORIZED, "Invalid token");
   }
-  const user = await userModel.findById(decoded.id).select("-password");
+  const user = await userModel
+    .findById(decoded.id)
+    .select("-password")
+    .populate({
+      path: "role",
+      populate: { path: "permissions" },
+    });
   if (!user) {
     throw new ApiError(StatusCodes.UNAUTHORIZED, "User not found");
   }
