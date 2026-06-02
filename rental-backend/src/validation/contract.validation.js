@@ -35,6 +35,14 @@ const createContract = Joi.object({
     "number.positive": "Giá thuê hàng tháng phải là số dương",
     "any.required": "Giá thuê hàng tháng là bắt buộc",
   }),
+  electricityPrice: Joi.number().min(0).required().messages({
+    "number.min": "Giá điện không được là số âm",
+    "any.required": "Giá điện là bắt buộc",
+  }),
+  waterPrice: Joi.number().min(0).required().messages({
+    "number.min": "Giá nước không được là số âm",
+    "any.required": "Giá nước là bắt buộc",
+  }),
   status: Joi.string().valid("active", "expired", "terminated").default("active").messages({
     "any.only": "Trạng thái hợp đồng phải là: active, expired, terminated",
   }),
@@ -64,6 +72,12 @@ const updateContract = Joi.object({
   }),
   monthlyPrice: Joi.number().positive().messages({
     "number.positive": "Giá thuê hàng tháng phải là số dương",
+  }),
+  electricityPrice: Joi.number().min(0).messages({
+    "number.min": "Giá điện không được là số âm",
+  }),
+  waterPrice: Joi.number().min(0).messages({
+    "number.min": "Giá nước không được là số âm",
   }),
   status: Joi.string().valid("active", "expired", "terminated").messages({
     "any.only": "Trạng thái hợp đồng phải là: active, expired, terminated",

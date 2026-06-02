@@ -33,7 +33,15 @@ const createBuildingService = async (landlordId, buildingData) => {
 // GET ALL BUILDINGS  (public, phân trang + filter)
 // ---------------------------------------------------------------------------
 const getAllBuildingsService = async (query = {}) => {
-  const { page = 1, limit = 10, keyword, type, city, district, status = "active" } = query;
+  const {
+    page = 1,
+    limit = 10,
+    keyword,
+    type,
+    city,
+    district,
+    status = "active",
+  } = query;
 
   const filter = {};
 
@@ -60,10 +68,7 @@ const getAllBuildingsService = async (query = {}) => {
   // Search keyword theo name hoặc address.street
   if (keyword) {
     const regex = new RegExp(keyword, "i");
-    filter.$or = [
-      { name: regex },
-      { "address.street": regex },
-    ];
+    filter.$or = [{ name: regex }, { "address.street": regex }];
   }
 
   const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
@@ -142,8 +147,14 @@ const updateBuildingService = async (currentUserId, buildingId, updateData) => {
 
   // Whitelist các field được phép cập nhật
   const allowedFields = [
-    "name", "type", "description", "address",
-    "amenities", "images", "totalRooms", "contactPhone",
+    "name",
+    "type",
+    "description",
+    "address",
+    "amenities",
+    "images",
+    "totalRooms",
+    "contactPhone",
   ];
   const sanitizedData = {};
   for (const field of allowedFields) {
@@ -153,15 +164,26 @@ const updateBuildingService = async (currentUserId, buildingId, updateData) => {
   }
 
   if (Object.keys(sanitizedData).length === 0) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "Không có dữ liệu hợp lệ để cập nhật");
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      "Không có dữ liệu hợp lệ để cập nhật",
+    );
   }
 
   const updatedBuilding = await buildingModel
-    .findByIdAndUpdate(buildingId, { $set: sanitizedData }, { new: true, runValidators: true })
+    .findByIdAndUpdate(
+      buildingId,
+      { $set: sanitizedData },
+      { returnDocument: "after", runValidators: true },
+    )
     .populate(BUILDING_POPULATE)
     .lean();
 
-  return respone(StatusCodes.OK, "Cập nhật tòa nhà thành công", updatedBuilding);
+  return respone(
+    StatusCodes.OK,
+    "Cập nhật tòa nhà thành công",
+    updatedBuilding,
+  );
 };
 
 // ---------------------------------------------------------------------------
@@ -183,7 +205,10 @@ const deleteBuildingService = async (currentUserId, buildingId) => {
   }
 
   if (building.status === "inactive") {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "Tòa nhà này đã bị vô hiệu hóa");
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      "Tòa nhà này đã bị vô hiệu hóa",
+    );
   }
 
   building.status = "inactive";

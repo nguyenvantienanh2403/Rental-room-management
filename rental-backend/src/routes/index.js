@@ -5,8 +5,9 @@ import buildingRoute from "./building.route.js";
 import roomRoute from "./room.route.js";
 import tenantRoute from "./tenant.route.js";
 import contractRoute from "./contract.route.js";
+import invoiceRoute from "./invoice.route.js";
 
-export { authRoute, userRoute, buildingRoute, roomRoute, tenantRoute, contractRoute };
+export { authRoute, userRoute, buildingRoute, roomRoute, tenantRoute, contractRoute, invoiceRoute };
 
 const router = Router();
 
@@ -16,5 +17,6 @@ router.use("/buildings", buildingRoute);
 router.use("/rooms", roomRoute);
 router.use("/tenants", tenantRoute);
 router.use("/contracts", contractRoute);
+router.use("/invoices", invoiceRoute);
 
 export default router;

@@ -36,6 +36,16 @@ const contractSchema = new Schema(
       required: true,
       min: 0,
     },
+    electricityPrice: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    waterPrice: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
     status: {
       type: String,
       enum: ["active", "expired", "terminated"],

@@ -75,10 +75,7 @@ const getRoomsByBuildingService = async (buildingId, queryOptions = {}) => {
 // GET ROOM BY SLUG
 // ---------------------------------------------------------------------------
 const getRoomBySlugService = async (slug) => {
-  const room = await roomModel
-    .findOne({ slug })
-    .populate(ROOM_POPULATE)
-    .lean();
+  const room = await roomModel.findOne({ slug }).populate(ROOM_POPULATE).lean();
 
   if (!room) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy phòng");
@@ -97,7 +94,15 @@ const updateRoomService = async (roomId, updateData) => {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy phòng");
   }
 
-  const allowedFields = ["name", "price", "area", "status", "amenities", "images", "maxCapacity"];
+  const allowedFields = [
+    "name",
+    "price",
+    "area",
+    "status",
+    "amenities",
+    "images",
+    "maxCapacity",
+  ];
   const sanitizedData = {};
   for (const field of allowedFields) {
     if (updateData[field] !== undefined) {
@@ -106,11 +111,18 @@ const updateRoomService = async (roomId, updateData) => {
   }
 
   if (Object.keys(sanitizedData).length === 0) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "Không có dữ liệu hợp lệ để cập nhật");
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      "Không có dữ liệu hợp lệ để cập nhật",
+    );
   }
 
   const updatedRoom = await roomModel
-    .findByIdAndUpdate(roomId, { $set: sanitizedData }, { new: true, runValidators: true })
+    .findByIdAndUpdate(
+      roomId,
+      { $set: sanitizedData },
+      { returnDocument: "after", runValidators: true },
+    )
     .populate(ROOM_POPULATE)
     .lean();
 

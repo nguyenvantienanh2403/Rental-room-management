@@ -17,17 +17,15 @@ const validate = (schema, source = "body") => {
     const dataToValidate = req[source];
 
     const { error, value } = schema.validate(dataToValidate, {
-      abortEarly: false,    // Trả về TẤT CẢ lỗi, không dừng ở lỗi đầu tiên
-      stripUnknown: true,   // Loại bỏ các field không có trong schema
+      abortEarly: false, // Trả về TẤT CẢ lỗi, không dừng ở lỗi đầu tiên
+      stripUnknown: true, // Loại bỏ các field không có trong schema
       errors: {
         wrap: { label: false }, // Không wrap label trong dấu ngoặc kép
       },
     });
 
     if (error) {
-      const message = error.details
-        .map((detail) => detail.message)
-        .join(", ");
+      const message = error.details.map((detail) => detail.message).join(", ");
 
       throw new ApiError(StatusCodes.BAD_REQUEST, message);
     }

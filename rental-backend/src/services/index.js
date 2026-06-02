@@ -5,5 +5,6 @@ import * as buildingService from "./building.service.js";
 import * as roomService from "./room.service.js";
 import * as tenantService from "./tenant.service.js";
 import * as contractService from "./contract.service.js";
+import * as invoiceService from "./invoice.service.js";
 
-export { authService, userService, uploadService, buildingService, roomService, tenantService, contractService };
+export { authService, userService, uploadService, buildingService, roomService, tenantService, contractService, invoiceService };

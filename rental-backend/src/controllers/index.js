@@ -5,5 +5,15 @@ import * as buildingController from "./building.controller.js";
 import * as roomController from "./room.controller.js";
 import * as tenantController from "./tenant.controller.js";
 import * as contractController from "./contract.controller.js";
+import { invoiceController } from "./invoice.controller.js";
 
-export { authController, userController, uploadController, buildingController, roomController, tenantController, contractController };
+export {
+  authController,
+  userController,
+  uploadController,
+  buildingController,
+  roomController,
+  tenantController,
+  contractController,
+  invoiceController,
+};
