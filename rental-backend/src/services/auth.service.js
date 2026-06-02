@@ -8,14 +8,14 @@ const registerService = async (userData) => {
   const { username, email, password } = userData;
   const existingUser = await userModel.findOne({ email });
   if (existingUser) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "Email already in use");
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Email đã được sử dụng");
   }
 
   const defaultRole = await roleModel.findOne({ name: "User" });
   if (!defaultRole) {
     throw new ApiError(
       StatusCodes.INTERNAL_SERVER_ERROR,
-      "Default role 'User' is not configured",
+      "Chưa cấu hình role mặc định 'User'",
     );
   }
 
@@ -26,7 +26,7 @@ const registerService = async (userData) => {
     password: hashedPassword,
     role: defaultRole._id,
   });
-  return respone(StatusCodes.CREATED, "User registered successfully", {
+  return respone(StatusCodes.CREATED, "Đăng ký thành công", {
     userId: newUser._id,
     username: newUser.username,
     email: newUser.email,
@@ -36,11 +36,11 @@ const registerService = async (userData) => {
 const loginService = async (email, password, res) => {
   const user = await userModel.findOne({ email }).populate("role");
   if (!user) {
-    throw new ApiError(StatusCodes.UNAUTHORIZED, "Invalid email or password");
+    throw new ApiError(StatusCodes.UNAUTHORIZED, "Email hoặc mật khẩu không hợp lệ");
   }
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
-    throw new ApiError(StatusCodes.UNAUTHORIZED, "Invalid email or password");
+    throw new ApiError(StatusCodes.UNAUTHORIZED, "Email hoặc mật khẩu không hợp lệ");
   }
   const accessToken = jwt_utils.generateAccessToken(user._id);
   const refreshToken = jwt_utils.generateRefreshToken(user._id);
@@ -61,7 +61,7 @@ const loginService = async (email, password, res) => {
 
   const userResponse = user.toObject();
   delete userResponse.password; // remove password from response
-  return respone(StatusCodes.OK, "Login successful", {
+  return respone(StatusCodes.OK, "Đăng nhập thành công", {
     accessToken,
     user: userResponse,
   });
@@ -69,11 +69,11 @@ const loginService = async (email, password, res) => {
 
 const refreshTokenService = async (tokenValue) => {
   if (!tokenValue) {
-    throw new ApiError(StatusCodes.UNAUTHORIZED, "No refresh token provided");
+    throw new ApiError(StatusCodes.UNAUTHORIZED, "Không tìm thấy refresh token");
   }
   const storedToken = await token.findOne({ refreshToken: tokenValue });
   if (!storedToken) {
-    throw new ApiError(StatusCodes.UNAUTHORIZED, "Invalid refresh token");
+    throw new ApiError(StatusCodes.UNAUTHORIZED, "Refresh token không hợp lệ");
   }
   let decoded;
   try {
@@ -81,27 +81,27 @@ const refreshTokenService = async (tokenValue) => {
   } catch (err) {
     if (err.name === "TokenExpiredError") {
       await token.deleteOne({ refreshToken: tokenValue }); // remove expired token from database
-      throw new ApiError(StatusCodes.UNAUTHORIZED, "Refresh token expired");
+      throw new ApiError(StatusCodes.UNAUTHORIZED, "Refresh token đã hết hạn");
     }
-    throw new ApiError(StatusCodes.UNAUTHORIZED, "Invalid refresh token");
+    throw new ApiError(StatusCodes.UNAUTHORIZED, "Refresh token không hợp lệ");
   }
 
   if (storedToken.userId.toString() !== decoded.id) {
-    throw new ApiError(StatusCodes.UNAUTHORIZED, "Invalid refresh token");
+    throw new ApiError(StatusCodes.UNAUTHORIZED, "Refresh token không hợp lệ");
   }
 
   const newAccessToken = jwt_utils.generateAccessToken(storedToken.userId);
-  return respone(StatusCodes.OK, "Access token refreshed successfully", {
+  return respone(StatusCodes.OK, "Làm mới token thành công", {
     accessToken: newAccessToken,
   });
 };
 
 const logoutService = async (refreshToken) => {
   if (!refreshToken) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "No refresh token provided");
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Không tìm thấy refresh token");
   }
   await token.deleteOne({ refreshToken: refreshToken }); // remove the refresh token from database
-  return respone(StatusCodes.OK, "Logged out successfully");
+  return respone(StatusCodes.OK, "Đăng xuất thành công");
 };
 
 export { registerService, loginService, refreshTokenService, logoutService };

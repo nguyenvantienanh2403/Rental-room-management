@@ -14,7 +14,7 @@ const checkPermission = (requiredPermission) => {
     if (!user || !user.role) {
       throw new ApiError(
         StatusCodes.FORBIDDEN,
-        "You do not have permission to perform this action",
+        "Bạn không có quyền thực hiện hành động này",
       );
     }
 
@@ -31,7 +31,7 @@ const checkPermission = (requiredPermission) => {
     if (!hasPermission) {
       throw new ApiError(
         StatusCodes.FORBIDDEN,
-        "You do not have permission to perform this action",
+        "Bạn không có quyền thực hiện hành động này",
       );
     }
 

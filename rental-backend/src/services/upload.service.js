@@ -31,7 +31,7 @@ const uploadToCloudinary = (buffer, folder, options = {}) => {
           return reject(
             new ApiError(
               StatusCodes.INTERNAL_SERVER_ERROR,
-              `Cloudinary upload failed: ${error.message}`,
+              `Lỗi upload Cloudinary: ${error.message}`,
             ),
           );
         }
@@ -111,13 +111,13 @@ const extractPublicId = (url) => {
  */
 const uploadAvatarService = async (userId, file) => {
   if (!file) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "No image file provided");
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Không có file ảnh được cung cấp");
   }
 
   // 1. Lấy user hiện tại
   const user = await userModel.findById(userId).select("-password");
   if (!user) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "User not found");
+    throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy người dùng");
   }
 
   // 2. Upload ảnh mới lên Cloudinary
@@ -152,7 +152,7 @@ const uploadAvatarService = async (userId, file) => {
     })
     .lean();
 
-  return respone(StatusCodes.OK, "Avatar uploaded successfully", {
+  return respone(StatusCodes.OK, "Tải avatar lên thành công", {
     avatar: secure_url,
     public_id,
     user: updatedUser,

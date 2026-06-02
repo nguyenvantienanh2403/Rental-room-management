@@ -24,14 +24,23 @@ const createTenantService = async (tenantData) => {
   if (existingTenant) {
     throw new ApiError(
       StatusCodes.CONFLICT,
-      "Identity card already exists in the system",
+      "Căn cước công dân đã tồn tại trong hệ thống",
     );
   }
 
   // Check if room exists
   const room = await roomModel.findById(tenantData.roomId);
   if (!room) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "Room not found");
+    throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy phòng");
+  }
+
+  // Capacity check
+  const currentTenantsCount = await tenantModel.countDocuments({ roomId: tenantData.roomId, status: "active" });
+  if (currentTenantsCount >= room.maxCapacity) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      "Phòng đã đạt giới hạn sức chứa tối đa. Không thể thêm người."
+    );
   }
 
   const newTenant = await tenantModel.create(tenantData);
@@ -41,7 +50,7 @@ const createTenantService = async (tenantData) => {
     .populate(TENANT_POPULATE)
     .lean();
 
-  return respone(StatusCodes.CREATED, "Tenant created successfully", tenant);
+  return respone(StatusCodes.CREATED, "Tạo khách thuê thành công", tenant);
 };
 
 // ---------------------------------------------------------------------------
@@ -54,7 +63,7 @@ const getTenantsByRoomService = async (roomId) => {
     .sort({ createdAt: -1 })
     .lean();
 
-  return respone(StatusCodes.OK, "Tenants retrieved successfully", tenants);
+  return respone(StatusCodes.OK, "Lấy danh sách khách thuê thành công", tenants);
 };
 
 // ---------------------------------------------------------------------------
@@ -67,10 +76,10 @@ const getTenantByIdService = async (tenantId) => {
     .lean();
 
   if (!tenant) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "Tenant not found");
+    throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy khách thuê");
   }
 
-  return respone(StatusCodes.OK, "Tenant retrieved successfully", tenant);
+  return respone(StatusCodes.OK, "Lấy thông tin khách thuê thành công", tenant);
 };
 
 // ---------------------------------------------------------------------------
@@ -80,7 +89,7 @@ const updateTenantService = async (tenantId, updateData) => {
   const tenant = await tenantModel.findById(tenantId);
 
   if (!tenant) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "Tenant not found");
+    throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy khách thuê");
   }
 
   // Check if identityCard is being updated and if it conflicts
@@ -94,7 +103,7 @@ const updateTenantService = async (tenantId, updateData) => {
     if (existingTenant) {
       throw new ApiError(
         StatusCodes.CONFLICT,
-        "Identity card already exists in the system",
+        "Căn cước công dân đã tồn tại trong hệ thống",
       );
     }
   }
@@ -103,7 +112,16 @@ const updateTenantService = async (tenantId, updateData) => {
   if (updateData.roomId && updateData.roomId !== tenant.roomId.toString()) {
     const room = await roomModel.findById(updateData.roomId);
     if (!room) {
-      throw new ApiError(StatusCodes.NOT_FOUND, "Room not found");
+      throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy phòng");
+    }
+
+    // Capacity check for new room
+    const currentTenantsCount = await tenantModel.countDocuments({ roomId: updateData.roomId, status: "active" });
+    if (currentTenantsCount >= room.maxCapacity) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        "Phòng đã đạt giới hạn sức chứa tối đa. Không thể thêm người."
+      );
     }
   }
 
@@ -124,7 +142,7 @@ const updateTenantService = async (tenantId, updateData) => {
   }
 
   if (Object.keys(sanitizedData).length === 0) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "No valid fields to update");
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Không có dữ liệu hợp lệ để cập nhật");
   }
 
   const updatedTenant = await tenantModel
@@ -136,7 +154,7 @@ const updateTenantService = async (tenantId, updateData) => {
     .populate(TENANT_POPULATE)
     .lean();
 
-  return respone(StatusCodes.OK, "Tenant updated successfully", updatedTenant);
+  return respone(StatusCodes.OK, "Cập nhật khách thuê thành công", updatedTenant);
 };
 
 // ---------------------------------------------------------------------------
@@ -146,12 +164,12 @@ const deleteTenantService = async (tenantId) => {
   const tenant = await tenantModel.findById(tenantId);
 
   if (!tenant) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "Tenant not found");
+    throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy khách thuê");
   }
 
   await tenantModel.findByIdAndDelete(tenantId);
 
-  return respone(StatusCodes.OK, "Tenant deleted successfully");
+  return respone(StatusCodes.OK, "Xóa khách thuê thành công");
 };
 
 export {

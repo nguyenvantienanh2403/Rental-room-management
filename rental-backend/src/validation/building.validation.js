@@ -8,7 +8,7 @@ const addressSchema = Joi.object({
     .trim()
     .required()
     .messages({
-      "any.required": "Street address is required",
+      "any.required": "Tên đường là bắt buộc",
     }),
   ward: Joi.string()
     .trim()
@@ -18,13 +18,13 @@ const addressSchema = Joi.object({
     .trim()
     .required()
     .messages({
-      "any.required": "District is required",
+      "any.required": "Quận/Huyện là bắt buộc",
     }),
   city: Joi.string()
     .trim()
     .required()
     .messages({
-      "any.required": "City is required",
+      "any.required": "Thành phố là bắt buộc",
     }),
 });
 
@@ -36,13 +36,13 @@ const imageSchema = Joi.object({
     .uri()
     .required()
     .messages({
-      "string.uri": "Image URL must be a valid URL",
-      "any.required": "Image URL is required",
+      "string.uri": "URL hình ảnh không hợp lệ",
+      "any.required": "URL hình ảnh là bắt buộc",
     }),
   publicId: Joi.string()
     .required()
     .messages({
-      "any.required": "Image publicId is required",
+      "any.required": "Image publicId là bắt buộc",
     }),
 });
 
@@ -56,17 +56,17 @@ const createBuilding = Joi.object({
     .max(200)
     .required()
     .messages({
-      "string.min": "Building name must be at least 2 characters",
-      "string.max": "Building name must not exceed 200 characters",
-      "any.required": "Building name is required",
+      "string.min": "Tên tòa nhà phải có ít nhất 2 ký tự",
+      "string.max": "Tên tòa nhà không được vượt quá 200 ký tự",
+      "any.required": "Tên tòa nhà là bắt buộc",
     }),
 
   type: Joi.string()
     .valid("apartment", "boarding_house", "dormitory", "studio", "other")
     .required()
     .messages({
-      "any.only": "Type must be one of: apartment, boarding_house, dormitory, studio, other",
-      "any.required": "Building type is required",
+      "any.only": "Loại tòa nhà phải là: apartment, boarding_house, dormitory, studio, other",
+      "any.required": "Loại tòa nhà là bắt buộc",
     }),
 
   description: Joi.string()
@@ -75,11 +75,11 @@ const createBuilding = Joi.object({
     .allow("")
     .default("")
     .messages({
-      "string.max": "Description must not exceed 2000 characters",
+      "string.max": "Mô tả không được vượt quá 2000 ký tự",
     }),
 
   address: addressSchema.required().messages({
-    "any.required": "Address is required",
+    "any.required": "Địa chỉ là bắt buộc",
   }),
 
   amenities: Joi.array()
@@ -95,7 +95,7 @@ const createBuilding = Joi.object({
     .min(0)
     .default(0)
     .messages({
-      "number.min": "Total rooms cannot be negative",
+      "number.min": "Tổng số phòng không được là số âm",
     }),
 
   contactPhone: Joi.string()
@@ -104,7 +104,7 @@ const createBuilding = Joi.object({
     .allow("")
     .default("")
     .messages({
-      "string.pattern.base": "Please provide a valid phone number",
+      "string.pattern.base": "Vui lòng cung cấp số điện thoại hợp lệ",
     }),
 });
 
@@ -117,14 +117,14 @@ const updateBuilding = Joi.object({
     .min(2)
     .max(200)
     .messages({
-      "string.min": "Building name must be at least 2 characters",
-      "string.max": "Building name must not exceed 200 characters",
+      "string.min": "Tên tòa nhà phải có ít nhất 2 ký tự",
+      "string.max": "Tên tòa nhà không được vượt quá 200 ký tự",
     }),
 
   type: Joi.string()
     .valid("apartment", "boarding_house", "dormitory", "studio", "other")
     .messages({
-      "any.only": "Type must be one of: apartment, boarding_house, dormitory, studio, other",
+      "any.only": "Loại tòa nhà phải là: apartment, boarding_house, dormitory, studio, other",
     }),
 
   description: Joi.string()
@@ -132,7 +132,7 @@ const updateBuilding = Joi.object({
     .max(2000)
     .allow("")
     .messages({
-      "string.max": "Description must not exceed 2000 characters",
+      "string.max": "Mô tả không được vượt quá 2000 ký tự",
     }),
 
   address: addressSchema,
@@ -147,7 +147,7 @@ const updateBuilding = Joi.object({
     .integer()
     .min(0)
     .messages({
-      "number.min": "Total rooms cannot be negative",
+      "number.min": "Tổng số phòng không được là số âm",
     }),
 
   contactPhone: Joi.string()
@@ -155,10 +155,10 @@ const updateBuilding = Joi.object({
     .pattern(/^[0-9+\-\s()]{7,20}$/)
     .allow("")
     .messages({
-      "string.pattern.base": "Please provide a valid phone number",
+      "string.pattern.base": "Vui lòng cung cấp số điện thoại hợp lệ",
     }),
 }).min(1).messages({
-  "object.min": "At least one field must be provided to update",
+  "object.min": "Phải cung cấp ít nhất một trường để cập nhật",
 });
 
 export const buildingValidation = {

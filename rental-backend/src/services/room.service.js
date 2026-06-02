@@ -7,6 +7,11 @@ const ROOM_POPULATE = [
     path: "buildingId",
     select: "name address type landlordId",
   },
+  {
+    path: "tenants",
+    match: { status: "active" },
+    select: "fullName identityCard phoneNumber homeTown",
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -16,7 +21,7 @@ const createRoomService = async (roomData) => {
   // Check if building exists
   const building = await buildingModel.findById(roomData.buildingId);
   if (!building) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "Building not found");
+    throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy tòa nhà");
   }
 
   const newRoom = await roomModel.create(roomData);
@@ -26,7 +31,7 @@ const createRoomService = async (roomData) => {
     .populate(ROOM_POPULATE)
     .lean();
 
-  return respone(StatusCodes.CREATED, "Room created successfully", room);
+  return respone(StatusCodes.CREATED, "Tạo phòng thành công", room);
 };
 
 // ---------------------------------------------------------------------------
@@ -55,7 +60,7 @@ const getRoomsByBuildingService = async (buildingId, queryOptions = {}) => {
     roomModel.countDocuments(filter),
   ]);
 
-  return respone(StatusCodes.OK, "Rooms retrieved successfully", {
+  return respone(StatusCodes.OK, "Lấy danh sách phòng thành công", {
     rooms,
     pagination: {
       page: parseInt(page, 10),
@@ -76,10 +81,10 @@ const getRoomBySlugService = async (slug) => {
     .lean();
 
   if (!room) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "Room not found");
+    throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy phòng");
   }
 
-  return respone(StatusCodes.OK, "Room retrieved successfully", room);
+  return respone(StatusCodes.OK, "Lấy thông tin phòng thành công", room);
 };
 
 // ---------------------------------------------------------------------------
@@ -89,10 +94,10 @@ const updateRoomService = async (roomId, updateData) => {
   const room = await roomModel.findById(roomId);
 
   if (!room) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "Room not found");
+    throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy phòng");
   }
 
-  const allowedFields = ["name", "price", "area", "status", "amenities", "images"];
+  const allowedFields = ["name", "price", "area", "status", "amenities", "images", "maxCapacity"];
   const sanitizedData = {};
   for (const field of allowedFields) {
     if (updateData[field] !== undefined) {
@@ -101,7 +106,7 @@ const updateRoomService = async (roomId, updateData) => {
   }
 
   if (Object.keys(sanitizedData).length === 0) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "No valid fields to update");
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Không có dữ liệu hợp lệ để cập nhật");
   }
 
   const updatedRoom = await roomModel
@@ -109,7 +114,7 @@ const updateRoomService = async (roomId, updateData) => {
     .populate(ROOM_POPULATE)
     .lean();
 
-  return respone(StatusCodes.OK, "Room updated successfully", updatedRoom);
+  return respone(StatusCodes.OK, "Cập nhật phòng thành công", updatedRoom);
 };
 
 // ---------------------------------------------------------------------------
@@ -119,12 +124,12 @@ const deleteRoomService = async (roomId) => {
   const room = await roomModel.findById(roomId);
 
   if (!room) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "Room not found");
+    throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy phòng");
   }
 
   await roomModel.findByIdAndDelete(roomId);
 
-  return respone(StatusCodes.OK, "Room deleted successfully");
+  return respone(StatusCodes.OK, "Xóa phòng thành công");
 };
 
 export {

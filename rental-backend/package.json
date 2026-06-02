@@ -2,10 +2,10 @@
   "name": "rental-backend",
   "version": "1.0.0",
   "description": "",
-  "main": "server.js",
+  "main": "./src/Server.js",
   "scripts": {
-    "dev": "nodemon server.js",
-    "start": "node server.js",
+    "dev": "nodemon ./src/Server.js",
+    "start": "node ./src/Server.js",
     "seed:roles": "node ./src/scripts/seedRoles.js"
   },
   "keywords": [],

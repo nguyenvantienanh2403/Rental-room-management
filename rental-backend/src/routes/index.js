@@ -4,8 +4,9 @@ import userRoute from "./user.route.js";
 import buildingRoute from "./building.route.js";
 import roomRoute from "./room.route.js";
 import tenantRoute from "./tenant.route.js";
+import contractRoute from "./contract.route.js";
 
-export { authRoute, userRoute, buildingRoute, roomRoute, tenantRoute };
+export { authRoute, userRoute, buildingRoute, roomRoute, tenantRoute, contractRoute };
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.use("/users", userRoute);
 router.use("/buildings", buildingRoute);
 router.use("/rooms", roomRoute);
 router.use("/tenants", tenantRoute);
+router.use("/contracts", contractRoute);
 
 export default router;

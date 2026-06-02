@@ -1,42 +1,42 @@
 import Joi from "joi";
 
-const objectIdMessage = "Invalid ObjectId format";
+const objectIdMessage = "Định dạng ObjectId không hợp lệ";
 
 const createTenant = Joi.object({
   fullName: Joi.string().trim().required().messages({
-    "any.required": "Full name is required",
+    "any.required": "Họ và tên là bắt buộc",
   }),
   identityCard: Joi.string()
     .trim()
     .pattern(/^[0-9]{9,12}$/)
     .required()
     .messages({
-      "any.required": "Identity card is required",
-      "string.pattern.base": "Identity card must be between 9 and 12 digits",
+      "any.required": "Căn cước công dân là bắt buộc",
+      "string.pattern.base": "Căn cước công dân phải từ 9 đến 12 số",
     }),
   phoneNumber: Joi.string()
     .trim()
     .pattern(/^[0-9+\-\s()]{7,20}$/)
     .required()
     .messages({
-      "any.required": "Phone number is required",
-      "string.pattern.base": "Please provide a valid phone number",
+      "any.required": "Số điện thoại là bắt buộc",
+      "string.pattern.base": "Vui lòng cung cấp số điện thoại hợp lệ",
     }),
   email: Joi.string().email().allow("").messages({
-    "string.email": "Please provide a valid email address",
+    "string.email": "Vui lòng cung cấp địa chỉ email hợp lệ",
   }),
   homeTown: Joi.string().trim().required().messages({
-    "any.required": "Hometown is required",
+    "any.required": "Quê quán là bắt buộc",
   }),
   roomId: Joi.string()
     .regex(/^[0-9a-fA-F]{24}$/)
     .required()
     .messages({
-      "any.required": "Room ID is required",
+      "any.required": "ID phòng là bắt buộc",
       "string.pattern.base": objectIdMessage,
     }),
   status: Joi.string().valid("active", "moved_out").default("active").messages({
-    "any.only": "Status must be one of: active, moved_out",
+    "any.only": "Trạng thái phải là: active, moved_out",
   }),
 });
 
@@ -46,16 +46,16 @@ const updateTenant = Joi.object({
     .trim()
     .pattern(/^[0-9]{9,12}$/)
     .messages({
-      "string.pattern.base": "Identity card must be between 9 and 12 digits",
+      "string.pattern.base": "Căn cước công dân phải từ 9 đến 12 số",
     }),
   phoneNumber: Joi.string()
     .trim()
     .pattern(/^[0-9+\-\s()]{7,20}$/)
     .messages({
-      "string.pattern.base": "Please provide a valid phone number",
+      "string.pattern.base": "Vui lòng cung cấp số điện thoại hợp lệ",
     }),
   email: Joi.string().email().allow("").messages({
-    "string.email": "Please provide a valid email address",
+    "string.email": "Vui lòng cung cấp địa chỉ email hợp lệ",
   }),
   homeTown: Joi.string().trim(),
   roomId: Joi.string()
@@ -64,10 +64,10 @@ const updateTenant = Joi.object({
       "string.pattern.base": objectIdMessage,
     }),
   status: Joi.string().valid("active", "moved_out").messages({
-    "any.only": "Status must be one of: active, moved_out",
+    "any.only": "Trạng thái phải là: active, moved_out",
   }),
 }).min(1).messages({
-  "object.min": "At least one field must be provided to update",
+  "object.min": "Phải cung cấp ít nhất một trường để cập nhật",
 });
 
 export const tenantValidation = {

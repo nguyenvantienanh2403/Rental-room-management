@@ -19,7 +19,7 @@ const fileFilter = (req, file, cb) => {
     cb(
       new ApiError(
         StatusCodes.BAD_REQUEST,
-        `Invalid file type "${file.mimetype}". Only JPEG, PNG and WebP are allowed`,
+        `Định dạng file "${file.mimetype}" không hợp lệ. Chỉ chấp nhận JPEG, PNG và WebP`,
       ),
       false,
     );
@@ -49,7 +49,7 @@ const handleMulterError = (multerMiddleware) => {
             return next(
               new ApiError(
                 StatusCodes.BAD_REQUEST,
-                `File too large. Maximum size is ${MAX_FILE_SIZE / (1024 * 1024)}MB`,
+                `File quá lớn. Kích thước tối đa là ${MAX_FILE_SIZE / (1024 * 1024)}MB`,
               ),
             );
           }
@@ -57,7 +57,7 @@ const handleMulterError = (multerMiddleware) => {
             return next(
               new ApiError(
                 StatusCodes.BAD_REQUEST,
-                `Unexpected field "${err.field}"`,
+                `Trường dữ liệu không hợp lệ "${err.field}"`,
               ),
             );
           }

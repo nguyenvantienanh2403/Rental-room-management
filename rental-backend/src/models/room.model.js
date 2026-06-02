@@ -30,6 +30,11 @@ const roomSchema = new Schema(
       type: Number,
       min: 0,
     },
+    maxCapacity: {
+      type: Number,
+      default: 3,
+      min: 1,
+    },
     status: {
       type: String,
       enum: ["available", "rented", "maintenance"],
@@ -47,13 +52,24 @@ const roomSchema = new Schema(
       },
     ],
   },
-  { timestamps: true },
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  },
 );
 
 // Indexes for performance
 roomSchema.index({ buildingId: 1 });
 roomSchema.index({ status: 1 });
 roomSchema.index({ price: 1 });
+
+// Virtual Populate Tenants
+roomSchema.virtual("tenants", {
+  ref: "Tenant",
+  localField: "_id",
+  foreignField: "roomId",
+});
 
 const Room = model("Room", roomSchema);
 

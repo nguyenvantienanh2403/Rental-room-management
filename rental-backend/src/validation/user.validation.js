@@ -9,17 +9,17 @@ const register = Joi.object({
     .max(30)
     .required()
     .messages({
-      "string.min": "Username must be at least 3 characters",
-      "string.max": "Username must not exceed 30 characters",
-      "any.required": "Username is required",
+      "string.min": "Tên đăng nhập phải có ít nhất 3 ký tự",
+      "string.max": "Tên đăng nhập không được vượt quá 30 ký tự",
+      "any.required": "Tên đăng nhập là bắt buộc",
     }),
 
   email: Joi.string()
     .email()
     .required()
     .messages({
-      "string.email": "Please provide a valid email address",
-      "any.required": "Email is required",
+      "string.email": "Vui lòng cung cấp địa chỉ email hợp lệ",
+      "any.required": "Email là bắt buộc",
     }),
 
   password: Joi.string()
@@ -27,9 +27,9 @@ const register = Joi.object({
     .max(128)
     .required()
     .messages({
-      "string.min": "Password must be at least 6 characters",
-      "string.max": "Password must not exceed 128 characters",
-      "any.required": "Password is required",
+      "string.min": "Mật khẩu phải có ít nhất 6 ký tự",
+      "string.max": "Mật khẩu không được vượt quá 128 ký tự",
+      "any.required": "Mật khẩu là bắt buộc",
     }),
 });
 
@@ -41,14 +41,14 @@ const login = Joi.object({
     .email()
     .required()
     .messages({
-      "string.email": "Please provide a valid email address",
-      "any.required": "Email is required",
+      "string.email": "Vui lòng cung cấp địa chỉ email hợp lệ",
+      "any.required": "Email là bắt buộc",
     }),
 
   password: Joi.string()
     .required()
     .messages({
-      "any.required": "Password is required",
+      "any.required": "Mật khẩu là bắt buộc",
     }),
 });
 
@@ -60,23 +60,23 @@ const updateProfile = Joi.object({
     .min(3)
     .max(30)
     .messages({
-      "string.min": "Username must be at least 3 characters",
-      "string.max": "Username must not exceed 30 characters",
+      "string.min": "Tên đăng nhập phải có ít nhất 3 ký tự",
+      "string.max": "Tên đăng nhập không được vượt quá 30 ký tự",
     }),
 
   email: Joi.string()
     .email()
     .messages({
-      "string.email": "Please provide a valid email address",
+      "string.email": "Vui lòng cung cấp địa chỉ email hợp lệ",
     }),
 
   avatar: Joi.string()
     .uri()
     .messages({
-      "string.uri": "Avatar must be a valid URL",
+      "string.uri": "Avatar phải là một URL hợp lệ",
     }),
 }).min(1).messages({
-  "object.min": "At least one field must be provided to update",
+  "object.min": "Phải cung cấp ít nhất một trường để cập nhật",
 });
 
 // ---------------------------------------------------------------------------
@@ -86,7 +86,7 @@ const changePassword = Joi.object({
   currentPassword: Joi.string()
     .required()
     .messages({
-      "any.required": "Current password is required",
+      "any.required": "Mật khẩu hiện tại là bắt buộc",
     }),
 
   newPassword: Joi.string()
@@ -95,10 +95,10 @@ const changePassword = Joi.object({
     .required()
     .disallow(Joi.ref("currentPassword"))
     .messages({
-      "string.min": "New password must be at least 6 characters",
-      "string.max": "New password must not exceed 128 characters",
-      "any.required": "New password is required",
-      "any.invalid": "New password must be different from current password",
+      "string.min": "Mật khẩu mới phải có ít nhất 6 ký tự",
+      "string.max": "Mật khẩu mới không được vượt quá 128 ký tự",
+      "any.required": "Mật khẩu mới là bắt buộc",
+      "any.invalid": "Mật khẩu mới phải khác với mật khẩu hiện tại",
     }),
 });
 

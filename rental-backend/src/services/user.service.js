@@ -32,14 +32,14 @@ const getUserByIdService = async (userId) => {
     .lean();
 
   if (!user) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "User not found");
+    throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy người dùng");
   }
 
   if (user.status === "inactive") {
-    throw new ApiError(StatusCodes.GONE, "This account has been deactivated");
+    throw new ApiError(StatusCodes.GONE, "Tài khoản này đã bị vô hiệu hóa");
   }
 
-  return respone(StatusCodes.OK, "User retrieved successfully", user);
+  return respone(StatusCodes.OK, "Lấy thông tin người dùng thành công", user);
 };
 
 // ---------------------------------------------------------------------------
@@ -76,7 +76,7 @@ const getAllUsersService = async (query = {}) => {
     userModel.countDocuments(filter),
   ]);
 
-  return respone(StatusCodes.OK, "Users retrieved successfully", {
+  return respone(StatusCodes.OK, "Lấy danh sách người dùng thành công", {
     users,
     pagination: {
       page: parseInt(page, 10),
@@ -90,12 +90,16 @@ const getAllUsersService = async (query = {}) => {
 // ---------------------------------------------------------------------------
 // UPDATE PROFILE  (only the authenticated user can update their own profile)
 // ---------------------------------------------------------------------------
-const updateProfileService = async (currentUserId, targetUserId, updateData) => {
+const updateProfileService = async (
+  currentUserId,
+  targetUserId,
+  updateData,
+) => {
   // Ensure users can only update their own profile
   if (currentUserId.toString() !== targetUserId.toString()) {
     throw new ApiError(
       StatusCodes.FORBIDDEN,
-      "You can only update your own profile",
+      "Bạn chỉ có thể cập nhật thông tin cá nhân của mình",
     );
   }
 
@@ -109,7 +113,10 @@ const updateProfileService = async (currentUserId, targetUserId, updateData) => 
   }
 
   if (Object.keys(sanitizedData).length === 0) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "No valid fields to update");
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      "Không có dữ liệu hợp lệ để cập nhật",
+    );
   }
 
   // Check for duplicate username if being updated
@@ -119,7 +126,7 @@ const updateProfileService = async (currentUserId, targetUserId, updateData) => 
       _id: { $ne: targetUserId },
     });
     if (existingUsername) {
-      throw new ApiError(StatusCodes.CONFLICT, "Username already in use");
+      throw new ApiError(StatusCodes.CONFLICT, "Tên đăng nhập đã được sử dụng");
     }
   }
 
@@ -130,75 +137,86 @@ const updateProfileService = async (currentUserId, targetUserId, updateData) => 
       _id: { $ne: targetUserId },
     });
     if (existingEmail) {
-      throw new ApiError(StatusCodes.CONFLICT, "Email already in use");
+      throw new ApiError(StatusCodes.CONFLICT, "Email đã được sử dụng");
     }
   }
 
   const updatedUser = await userModel
-    .findByIdAndUpdate(targetUserId, { $set: sanitizedData }, { new: true, runValidators: true })
+    .findByIdAndUpdate(
+      targetUserId,
+      { $set: sanitizedData },
+      { returnDocument: "after", runValidators: true },
+    )
     .select(EXCLUDE_FIELDS)
     .populate(USER_POPULATE)
     .lean();
 
   if (!updatedUser) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "User not found");
+    throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy người dùng");
   }
 
-  return respone(StatusCodes.OK, "Profile updated successfully", updatedUser);
+  return respone(StatusCodes.OK, "Cập nhật hồ sơ thành công", updatedUser);
 };
 
 // ---------------------------------------------------------------------------
 // CHANGE PASSWORD
 // ---------------------------------------------------------------------------
-const changePasswordService = async (currentUserId, targetUserId, passwordData) => {
+const changePasswordService = async (
+  currentUserId,
+  targetUserId,
+  passwordData,
+) => {
   const { currentPassword, newPassword } = passwordData;
 
   // Ensure users can only change their own password
   if (currentUserId.toString() !== targetUserId.toString()) {
     throw new ApiError(
       StatusCodes.FORBIDDEN,
-      "You can only change your own password",
+      "Bạn chỉ có thể thay đổi mật khẩu của chính mình",
     );
   }
 
   if (!currentPassword || !newPassword) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
-      "Current password and new password are required",
+      "Mật khẩu hiện tại và mật khẩu mới là bắt buộc",
     );
   }
 
   if (newPassword.length < 6) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
-      "New password must be at least 6 characters long",
+      "Mật khẩu mới phải có ít nhất 6 ký tự",
     );
   }
 
   if (currentPassword === newPassword) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
-      "New password must be different from current password",
+      "Mật khẩu mới phải khác mật khẩu hiện tại",
     );
   }
 
   // Fetch user WITH password (we need it for comparison)
   const user = await userModel.findById(targetUserId).select("+password");
   if (!user) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "User not found");
+    throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy người dùng");
   }
 
   // Verify the current password
   const isMatch = await bcrypt.compare(currentPassword, user.password);
   if (!isMatch) {
-    throw new ApiError(StatusCodes.UNAUTHORIZED, "Current password is incorrect");
+    throw new ApiError(
+      StatusCodes.UNAUTHORIZED,
+      "Mật khẩu hiện tại không đúng",
+    );
   }
 
   // Hash and save the new password
   user.password = await bcrypt.hash(newPassword, env.BCRYPT_SALT_ROUNDS);
   await user.save();
 
-  return respone(StatusCodes.OK, "Password changed successfully");
+  return respone(StatusCodes.OK, "Thay đổi mật khẩu thành công");
 };
 
 // ---------------------------------------------------------------------------
@@ -208,17 +226,17 @@ const deleteUserService = async (userId) => {
   const user = await userModel.findById(userId);
 
   if (!user) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "User not found");
+    throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy người dùng");
   }
 
   if (user.status === "inactive") {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "User is already deactivated");
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Người dùng đã bị vô hiệu hóa");
   }
 
   user.status = "inactive";
   await user.save();
 
-  return respone(StatusCodes.OK, "User deactivated successfully");
+  return respone(StatusCodes.OK, "Vô hiệu hóa người dùng thành công");
 };
 
 export {

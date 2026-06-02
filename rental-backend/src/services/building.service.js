@@ -26,7 +26,7 @@ const createBuildingService = async (landlordId, buildingData) => {
     .populate(BUILDING_POPULATE)
     .lean();
 
-  return respone(StatusCodes.CREATED, "Building created successfully", building);
+  return respone(StatusCodes.CREATED, "Tạo tòa nhà thành công", building);
 };
 
 // ---------------------------------------------------------------------------
@@ -80,7 +80,7 @@ const getAllBuildingsService = async (query = {}) => {
     buildingModel.countDocuments(filter),
   ]);
 
-  return respone(StatusCodes.OK, "Buildings retrieved successfully", {
+  return respone(StatusCodes.OK, "Lấy danh sách tòa nhà thành công", {
     buildings,
     pagination: {
       page: parseInt(page, 10),
@@ -112,14 +112,14 @@ const getBuildingBySlugOrIdService = async (identifier) => {
   }
 
   if (!building) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "Building not found");
+    throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy tòa nhà");
   }
 
   if (building.status === "inactive") {
-    throw new ApiError(StatusCodes.GONE, "This building has been deactivated");
+    throw new ApiError(StatusCodes.GONE, "Tòa nhà này đã bị vô hiệu hóa");
   }
 
-  return respone(StatusCodes.OK, "Building retrieved successfully", building);
+  return respone(StatusCodes.OK, "Lấy thông tin tòa nhà thành công", building);
 };
 
 // ---------------------------------------------------------------------------
@@ -129,14 +129,14 @@ const updateBuildingService = async (currentUserId, buildingId, updateData) => {
   const building = await buildingModel.findById(buildingId);
 
   if (!building) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "Building not found");
+    throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy tòa nhà");
   }
 
   // Chỉ landlord sở hữu mới được sửa
   if (building.landlordId.toString() !== currentUserId.toString()) {
     throw new ApiError(
       StatusCodes.FORBIDDEN,
-      "You can only update your own building",
+      "Bạn chỉ có thể cập nhật tòa nhà của chính mình",
     );
   }
 
@@ -153,7 +153,7 @@ const updateBuildingService = async (currentUserId, buildingId, updateData) => {
   }
 
   if (Object.keys(sanitizedData).length === 0) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "No valid fields to update");
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Không có dữ liệu hợp lệ để cập nhật");
   }
 
   const updatedBuilding = await buildingModel
@@ -161,7 +161,7 @@ const updateBuildingService = async (currentUserId, buildingId, updateData) => {
     .populate(BUILDING_POPULATE)
     .lean();
 
-  return respone(StatusCodes.OK, "Building updated successfully", updatedBuilding);
+  return respone(StatusCodes.OK, "Cập nhật tòa nhà thành công", updatedBuilding);
 };
 
 // ---------------------------------------------------------------------------
@@ -171,25 +171,25 @@ const deleteBuildingService = async (currentUserId, buildingId) => {
   const building = await buildingModel.findById(buildingId);
 
   if (!building) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "Building not found");
+    throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy tòa nhà");
   }
 
   // Chỉ landlord sở hữu mới được xóa
   if (building.landlordId.toString() !== currentUserId.toString()) {
     throw new ApiError(
       StatusCodes.FORBIDDEN,
-      "You can only delete your own building",
+      "Bạn chỉ có thể xóa tòa nhà của chính mình",
     );
   }
 
   if (building.status === "inactive") {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "Building is already deactivated");
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Tòa nhà này đã bị vô hiệu hóa");
   }
 
   building.status = "inactive";
   await building.save();
 
-  return respone(StatusCodes.OK, "Building deactivated successfully");
+  return respone(StatusCodes.OK, "Vô hiệu hóa tòa nhà thành công");
 };
 
 export {

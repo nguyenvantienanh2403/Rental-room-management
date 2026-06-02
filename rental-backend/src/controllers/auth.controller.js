@@ -34,7 +34,7 @@ const getMe = catchAsync(async (req, res) => {
   const user = req.user;
   res
     .status(StatusCodes.OK)
-    .json(respone(StatusCodes.OK, "User profile retrieved successfully", user));
+    .json(respone(StatusCodes.OK, "Lấy thông tin người dùng thành công", user));
 });
 
 export { register, login, refreshToken, logout, getMe };
