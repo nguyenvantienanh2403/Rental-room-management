@@ -1,6 +1,13 @@
+import mongoose from "mongoose";
 import { StatusCodes } from "http-status-codes";
 import { ApiError, respone } from "../utils/index.js";
-import { invoiceModel, contractModel, meterReadingModel, tenantModel, notificationModel } from "../models/index.js";
+import {
+  invoiceModel,
+  contractModel,
+  meterReadingModel,
+  tenantModel,
+  notificationModel,
+} from "../models/index.js";
 
 const INVOICE_POPULATE = [
   {
@@ -28,9 +35,16 @@ const INVOICE_POPULATE = [
 ];
 
 // Helper to calculate total
-const calculateTotals = (roomCharge, electricityTotal, waterTotal, otherFees = [], discount = 0) => {
+const calculateTotals = (
+  roomCharge,
+  electricityTotal,
+  waterTotal,
+  otherFees = [],
+  discount = 0,
+) => {
   const sumOtherFees = otherFees.reduce((acc, fee) => acc + fee.amount, 0);
-  const totalAmount = roomCharge + electricityTotal + waterTotal + sumOtherFees - discount;
+  const totalAmount =
+    roomCharge + electricityTotal + waterTotal + sumOtherFees - discount;
   return Math.max(0, totalAmount);
 };
 
@@ -38,100 +52,160 @@ const calculateTotals = (roomCharge, electricityTotal, waterTotal, otherFees = [
 // CREATE INVOICE
 // ---------------------------------------------------------------------------
 const createInvoiceService = async (invoiceData) => {
-  const { contractId, month, year, otherFees = [], discount = 0, dueDate } = invoiceData;
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  // Logic 1: De-duplication
-  const existingInvoice = await invoiceModel.findOne({ contractId, month, year });
-  if (existingInvoice) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "Hóa đơn cho tháng này đã được khởi tạo trước đó.");
-  }
+  try {
+    const {
+      contractId,
+      month,
+      year,
+      otherFees = [],
+      discount = 0,
+      dueDate,
+    } = invoiceData;
 
-  // B1: Lấy phiếu chốt số
-  const meterReading = await meterReadingModel.findOne({ contractId, month, year });
-  if (!meterReading) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "Chưa có phiếu chốt số điện nước cho tháng này.");
-  }
+    // Logic 1: De-duplication
+    const existingInvoice = await invoiceModel
+      .findOne({ contractId, month, year })
+      .session(session);
+    if (existingInvoice) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        "Hóa đơn cho tháng này đã được khởi tạo trước đó.",
+      );
+    }
 
-  // B2: Lấy thông tin Contract để lấy đơn giá
-  const contract = await contractModel.findById(contractId);
-  if (!contract) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy hợp đồng.");
-  }
-  if (contract.status !== "active") {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "Hợp đồng không còn hoạt động.");
-  }
+    // B1: Lấy phiếu chốt số
+    const meterReading = await meterReadingModel
+      .findOne({ contractId, month, year })
+      .session(session);
+    if (!meterReading) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        "Chưa có phiếu chốt số điện nước cho tháng này.",
+      );
+    }
 
-  // Lấy số lượng người thuê đang ở trong phòng của hợp đồng này
-  const numberOfTenants = await tenantModel.countDocuments({ roomId: contract.roomId, status: "active" });
+    // B2: Lấy thông tin Contract để lấy đơn giá
+    const contract = await contractModel.findById(contractId).session(session);
+    if (!contract) {
+      throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy hợp đồng.");
+    }
+    if (contract.status !== "active") {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        "Hợp đồng không còn hoạt động.",
+      );
+    }
 
-  // B3: Tính tiền điện
-  const electricityUsed = Math.max(0, meterReading.electricity.newIndex - meterReading.electricity.oldIndex);
-  const electricityTotal = electricityUsed * contract.electricityPrice;
+    // Lấy số lượng người thuê đang ở trong phòng của hợp đồng này
+    const numberOfTenants = await tenantModel
+      .countDocuments({ roomId: contract.roomId, status: "active" })
+      .session(session);
 
-  // B4: Tính tiền nước
-  let waterTotal = 0;
-  if (meterReading.water && meterReading.water.newIndex !== undefined) {
-    // Có chỉ số nước -> tính theo khối
-    const waterUsed = Math.max(0, meterReading.water.newIndex - meterReading.water.oldIndex);
-    waterTotal = waterUsed * contract.waterPrice;
-  } else {
-    // Không có chỉ số nước -> tính theo đầu người
-    waterTotal = contract.waterPrice * numberOfTenants;
-  }
+    // B3: Tính tiền điện
+    const electricityUsed = Math.max(
+      0,
+      meterReading.electricity.newIndex - meterReading.electricity.oldIndex,
+    );
+    const electricityTotal = electricityUsed * contract.electricityPrice;
 
-  // B5: Tính tổng tiền
-  const totalAmount = calculateTotals(contract.monthlyPrice, electricityTotal, waterTotal, otherFees, discount);
+    // B4: Tính tiền nước
+    let waterTotal = 0;
+    if (meterReading.water && meterReading.water.newIndex !== undefined) {
+      // Có chỉ số nước -> tính theo khối
+      const waterUsed = Math.max(
+        0,
+        meterReading.water.newIndex - meterReading.water.oldIndex,
+      );
+      waterTotal = waterUsed * contract.waterPrice;
+    } else {
+      // Không có chỉ số nước -> tính theo đầu người
+      waterTotal = contract.waterPrice * numberOfTenants;
+    }
 
-  // Tính toán Due Date
-  let finalDueDate = dueDate;
-  if (!finalDueDate) {
-    const today = new Date();
-    finalDueDate = new Date(today);
-    finalDueDate.setDate(today.getDate() + 5);
-  }
+    // B5: Tính tổng tiền
+    const totalAmount = calculateTotals(
+      contract.monthlyPrice,
+      electricityTotal,
+      waterTotal,
+      otherFees,
+      discount,
+    );
 
-  // Lưu Snapshot
-  const newInvoiceData = {
-    contractId,
-    meterReadingId: meterReading._id,
-    month,
-    year,
-    roomCharge: contract.monthlyPrice,
-    electricityUnitPrice: contract.electricityPrice,
-    waterUnitPrice: contract.waterPrice,
-    electricityTotal,
-    waterTotal,
-    otherFees,
-    discount,
-    totalAmount,
-    dueDate: finalDueDate,
-    status: "draft",
-  };
+    // Tính toán Due Date
+    let finalDueDate = dueDate;
+    if (!finalDueDate) {
+      const today = new Date();
+      finalDueDate = new Date(today);
+      finalDueDate.setDate(today.getDate() + 5);
+    }
 
-  const newInvoice = await invoiceModel.create(newInvoiceData);
-  
-  const populatedInvoice = await invoiceModel
-    .findById(newInvoice._id)
-    .populate(INVOICE_POPULATE)
-    .lean();
+    // Lưu Snapshot
+    const newInvoiceData = {
+      contractId,
+      meterReadingId: meterReading._id,
+      month,
+      year,
+      roomCharge: contract.monthlyPrice,
+      electricityUnitPrice: contract.electricityPrice,
+      waterUnitPrice: contract.waterPrice,
+      electricityTotal,
+      waterTotal,
+      otherFees,
+      discount,
+      totalAmount,
+      dueDate: finalDueDate,
+      status: "draft",
+    };
 
-  // Bắn thông báo NEW_INVOICE
-  const landlordId = populatedInvoice.contractId?.roomId?.buildingId?.landlordId;
-  const roomName = populatedInvoice.contractId?.roomId?.name;
-  if (landlordId) {
-    await notificationModel.create({
-      recipientId: landlordId,
-      title: "Hóa đơn mới",
-      message: `Hóa đơn tháng ${month}/${year} của ${roomName || "phòng"} đã được tạo thành công.`,
-      type: "NEW_INVOICE",
-      metadata: {
-        invoiceId: newInvoice._id,
-        contractId: contractId
-      }
+    const newInvoices = await invoiceModel.create([newInvoiceData], {
+      session,
     });
-  }
+    const newInvoice = newInvoices[0];
 
-  return respone(StatusCodes.CREATED, "Tạo hóa đơn thành công", populatedInvoice);
+    const populatedInvoice = await invoiceModel
+      .findById(newInvoice._id)
+      .populate(INVOICE_POPULATE)
+      .session(session)
+      .lean();
+
+    // Bắn thông báo NEW_INVOICE
+    const landlordId =
+      populatedInvoice.contractId?.roomId?.buildingId?.landlordId;
+    const roomName = populatedInvoice.contractId?.roomId?.name;
+    if (landlordId) {
+      await notificationModel.create(
+        [
+          {
+            recipientId: landlordId,
+            title: "Hóa đơn mới",
+            message: `Hóa đơn tháng ${month}/${year} của ${roomName || "phòng"} đã được tạo thành công.`,
+            type: "NEW_INVOICE",
+            metadata: {
+              invoiceId: newInvoice._id,
+              contractId: contractId,
+            },
+          },
+        ],
+        { session },
+      );
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return respone(
+      StatusCodes.CREATED,
+      "Tạo hóa đơn thành công",
+      populatedInvoice,
+    );
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
+  }
 };
 
 // ---------------------------------------------------------------------------
@@ -139,21 +213,24 @@ const createInvoiceService = async (invoiceData) => {
 // ---------------------------------------------------------------------------
 const updateInvoiceService = async (invoiceId, updateData) => {
   const invoice = await invoiceModel.findById(invoiceId);
-  
+
   if (!invoice) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy hóa đơn.");
   }
 
   // Khóa dữ liệu (Immutability)
   if (invoice.status !== "draft") {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "Hóa đơn đã chốt hoặc đã thanh toán, không thể chỉnh sửa số liệu.");
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      "Hóa đơn đã chốt hoặc đã thanh toán, không thể chỉnh sửa số liệu.",
+    );
   }
 
   // Cập nhật phụ phí, giảm giá và ngày đến hạn
   if (updateData.otherFees !== undefined) {
     invoice.otherFees = updateData.otherFees;
   }
-  
+
   if (updateData.discount !== undefined) {
     invoice.discount = updateData.discount;
   }
@@ -161,14 +238,14 @@ const updateInvoiceService = async (invoiceId, updateData) => {
   if (updateData.dueDate !== undefined) {
     invoice.dueDate = updateData.dueDate;
   }
-  
+
   // Tính lại tổng tiền (Giữ nguyên các giá trị snapshot cũ)
   invoice.totalAmount = calculateTotals(
     invoice.roomCharge,
     invoice.electricityTotal,
     invoice.waterTotal,
     invoice.otherFees,
-    invoice.discount
+    invoice.discount,
   );
 
   await invoice.save();
@@ -178,7 +255,11 @@ const updateInvoiceService = async (invoiceId, updateData) => {
     .populate(INVOICE_POPULATE)
     .lean();
 
-  return respone(StatusCodes.OK, "Cập nhật số liệu hóa đơn thành công", updatedInvoice);
+  return respone(
+    StatusCodes.OK,
+    "Cập nhật số liệu hóa đơn thành công",
+    updatedInvoice,
+  );
 };
 
 // ---------------------------------------------------------------------------
@@ -186,28 +267,40 @@ const updateInvoiceService = async (invoiceId, updateData) => {
 // ---------------------------------------------------------------------------
 const updateInvoiceStatusService = async (invoiceId, newStatus) => {
   const invoice = await invoiceModel.findById(invoiceId);
-  
+
   if (!invoice) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy hóa đơn.");
   }
 
   // Chuyển trạng thái tuần tự (State Machine)
   const currentStatus = invoice.status;
-  
+
   if (currentStatus === "paid" || currentStatus === "cancelled") {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "Quy trình chuyển đổi trạng thái không hợp lệ. Hóa đơn đã hoàn tất hoặc bị hủy.");
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      "Quy trình chuyển đổi trạng thái không hợp lệ. Hóa đơn đã hoàn tất hoặc bị hủy.",
+    );
   }
 
   let isValidTransition = false;
 
-  if (currentStatus === "draft" && ["issued", "cancelled"].includes(newStatus)) {
+  if (
+    currentStatus === "draft" &&
+    ["issued", "cancelled"].includes(newStatus)
+  ) {
     isValidTransition = true;
-  } else if (currentStatus === "issued" && ["paid", "cancelled"].includes(newStatus)) {
+  } else if (
+    currentStatus === "issued" &&
+    ["paid", "cancelled"].includes(newStatus)
+  ) {
     isValidTransition = true;
   }
 
   if (!isValidTransition) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, `Quy trình chuyển đổi trạng thái không hợp lệ từ '${currentStatus}' sang '${newStatus}'.`);
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      `Quy trình chuyển đổi trạng thái không hợp lệ từ '${currentStatus}' sang '${newStatus}'.`,
+    );
   }
 
   invoice.status = newStatus;
@@ -220,7 +313,8 @@ const updateInvoiceStatusService = async (invoiceId, newStatus) => {
 
   // Bắn thông báo INVOICE_PAID nếu trạng thái là paid
   if (newStatus === "paid") {
-    const landlordId = updatedInvoice.contractId?.roomId?.buildingId?.landlordId;
+    const landlordId =
+      updatedInvoice.contractId?.roomId?.buildingId?.landlordId;
     const roomName = updatedInvoice.contractId?.roomId?.name;
     if (landlordId) {
       await notificationModel.create({
@@ -230,13 +324,17 @@ const updateInvoiceStatusService = async (invoiceId, newStatus) => {
         type: "INVOICE_PAID",
         metadata: {
           invoiceId: invoiceId,
-          contractId: updatedInvoice.contractId?._id
-        }
+          contractId: updatedInvoice.contractId?._id,
+        },
       });
     }
   }
 
-  return respone(StatusCodes.OK, "Cập nhật trạng thái hóa đơn thành công", updatedInvoice);
+  return respone(
+    StatusCodes.OK,
+    "Cập nhật trạng thái hóa đơn thành công",
+    updatedInvoice,
+  );
 };
 
 // ---------------------------------------------------------------------------
