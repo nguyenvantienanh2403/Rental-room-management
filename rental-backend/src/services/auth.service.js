@@ -19,11 +19,10 @@ const registerService = async (userData) => {
     );
   }
 
-  const hashedPassword = await bcrypt.hash(password, env.BCRYPT_SALT_ROUNDS);
   const newUser = await userModel.create({
     username,
     email,
-    password: hashedPassword,
+    password,
     role: defaultRole._id,
   });
   return respone(StatusCodes.CREATED, "Đăng ký thành công", {

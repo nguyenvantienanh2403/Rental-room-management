@@ -102,9 +102,39 @@ const changePassword = Joi.object({
     }),
 });
 
+// ---------------------------------------------------------------------------
+// FORGOT PASSWORD
+// ---------------------------------------------------------------------------
+const forgotPassword = Joi.object({
+  email: Joi.string()
+    .email()
+    .required()
+    .messages({
+      "string.email": "Vui lòng cung cấp địa chỉ email hợp lệ",
+      "any.required": "Email là bắt buộc",
+    }),
+});
+
+// ---------------------------------------------------------------------------
+// RESET PASSWORD
+// ---------------------------------------------------------------------------
+const resetPassword = Joi.object({
+  password: Joi.string()
+    .min(6)
+    .max(128)
+    .required()
+    .messages({
+      "string.min": "Mật khẩu mới phải có ít nhất 6 ký tự",
+      "string.max": "Mật khẩu mới không được vượt quá 128 ký tự",
+      "any.required": "Mật khẩu mới là bắt buộc",
+    }),
+});
+
 export const userValidation = {
   register,
   login,
   updateProfile,
   changePassword,
+  forgotPassword,
+  resetPassword,
 };

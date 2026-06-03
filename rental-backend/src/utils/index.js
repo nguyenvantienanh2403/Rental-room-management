@@ -3,5 +3,6 @@ import catchAsync from "./catchAsync.js";
 import respone from "./respone.js";
 import jwt_utils from "./jwt-utils.js";
 import queryfeatures from "./queryFeature.js";
+import sendEmail from "./sendEmail.js";
 
-export { ApiError, catchAsync, respone, jwt_utils, queryfeatures };
+export { ApiError, catchAsync, respone, jwt_utils, queryfeatures, sendEmail };
