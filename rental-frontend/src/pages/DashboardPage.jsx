@@ -42,24 +42,24 @@ export function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 p-8 flex flex-col items-center justify-center">
+      <div className="h-full w-full bg-neutral flex flex-col items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Đang tải dữ liệu...</p>
+        <p className="mt-4 text-slate-400">Đang tải dữ liệu...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-slate-50 p-8 flex items-center justify-center">
+      <div className="h-full w-full bg-neutral flex items-center justify-center">
         <div className="w-full max-w-lg">
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="bg-red-950 border-red-900 text-red-200">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Lỗi</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
           <div className="mt-4 flex justify-center">
-             <Button onClick={() => window.location.reload()}>Thử lại</Button>
+             <Button onClick={() => window.location.reload()} className="bg-primary hover:bg-secondary">Thử lại</Button>
           </div>
         </div>
       </div>
@@ -69,8 +69,8 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight text-slate-800">Tổng quan</h2>
-        <p className="text-muted-foreground">Theo dõi hoạt động kinh doanh nhà trọ của bạn.</p>
+        <h2 className="text-3xl font-bold tracking-tight text-white">Tổng quan</h2>
+        <p className="text-slate-400">Theo dõi hoạt động kinh doanh nhà trọ của bạn.</p>
       </div>
 
       <StatCards data={data} />

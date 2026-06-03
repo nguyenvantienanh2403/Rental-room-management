@@ -4,20 +4,34 @@ import { RegisterPage } from './pages/RegisterPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { BuildingPage } from './pages/BuildingPage';
+import { BuildingFormPage } from './pages/BuildingFormPage';
+import { BuildingDetailPage } from './pages/BuildingDetailPage';
+import { NotFoundPage } from './pages/NotFoundPage';
 import { MainLayout } from './layout/MainLayout';
+import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
   return (
     <Routes>
+      {/* Public Routes */}
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
       
-      <Route element={<MainLayout />}>
+      {/* Protected Routes */}
+      <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/buildings" element={<BuildingPage />} />
+        <Route path="/buildings/new" element={<BuildingFormPage />} />
+        <Route path="/buildings/:id" element={<BuildingDetailPage />} />
+        <Route path="/buildings/:id/edit" element={<BuildingFormPage />} />
       </Route>
+
+      {/* 404 Route */}
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }

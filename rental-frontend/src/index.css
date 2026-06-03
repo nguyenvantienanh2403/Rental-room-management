@@ -1,22 +1,24 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: theme('colors.purple.600');
-  --color-primary-hover: theme('colors.purple.700');
-  --color-secondary: theme('colors.pink.500');
-  --color-secondary-hover: theme('colors.pink.600');
+  --color-primary: #5E17EB;
+  --color-primary-hover: #4b12bc; /* slightly darker primary for hover if needed */
+  --color-secondary: #FF3399;
+  --color-tertiary: #00F5FF;
+  --color-neutral: #1E293B; /* Slate 800 - Harmonizes beautifully with vibrant colors */
+  --color-neutral-foreground: #F8FAFC; /* Slate 50 - High contrast text on dark slate */
 }
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 222 47% 11%; /* Neutral approx */
+    --foreground: 210 40% 98%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
 
     --primary: 271 91% 65%; /* purple-600 approx */
     --primary-foreground: 210 40% 98%;

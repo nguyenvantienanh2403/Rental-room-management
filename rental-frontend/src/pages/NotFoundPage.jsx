@@ -1,0 +1,29 @@
+import { useNavigate } from "react-router-dom";
+import { Button } from "../components/ui/Button";
+import { Home } from "lucide-react";
+
+export function NotFoundPage() {
+  const navigate = useNavigate();
+
+  return (
+    <div className="min-h-screen bg-neutral text-neutral-foreground flex flex-col items-center justify-center p-4">
+      <div className="text-center space-y-6 max-w-md">
+        <h1 className="text-9xl font-bold text-primary opacity-80">404</h1>
+        <h2 className="text-3xl font-semibold tracking-tight text-white">Trang không tồn tại</h2>
+        <p className="text-slate-400">
+          Rất tiếc, trang bạn đang tìm kiếm không tồn tại hoặc đã bị gỡ bỏ.
+        </p>
+        <div className="pt-4">
+          <Button 
+            onClick={() => navigate("/")}
+            className="bg-primary hover:bg-secondary text-white border-none transition-all"
+            size="lg"
+          >
+            <Home className="mr-2 h-5 w-5" />
+            Quay lại Trang chủ
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}

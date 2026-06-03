@@ -38,10 +38,10 @@ export function LoginForm() {
   };
 
   return (
-    <Card className="w-full max-w-md bg-white/80 backdrop-blur-md shadow-xl border-white/20">
+    <Card className="w-full max-w-md bg-white/5 backdrop-blur-md shadow-xl border-white/10 text-white">
       <CardHeader>
-        <CardTitle className="text-2xl font-bold text-center text-primary">Đăng Nhập</CardTitle>
-        <CardDescription className="text-center">Chào mừng trở lại! Vui lòng đăng nhập vào tài khoản của bạn.</CardDescription>
+        <CardTitle className="text-2xl font-bold text-center text-tertiary">Đăng Nhập</CardTitle>
+        <CardDescription className="text-center text-slate-400">Chào mừng trở lại! Vui lòng đăng nhập vào tài khoản của bạn.</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">

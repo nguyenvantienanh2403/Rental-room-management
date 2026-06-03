@@ -43,10 +43,10 @@ export function RegisterForm() {
   };
 
   return (
-    <Card className="w-full max-w-md bg-white/80 backdrop-blur-md shadow-xl border-white/20">
+    <Card className="w-full max-w-md bg-white/5 backdrop-blur-md shadow-xl border-white/10 text-white">
       <CardHeader>
-        <CardTitle className="text-2xl font-bold text-center text-primary">Đăng Ký</CardTitle>
-        <CardDescription className="text-center">Tạo tài khoản mới để trải nghiệm dịch vụ.</CardDescription>
+        <CardTitle className="text-2xl font-bold text-center text-tertiary">Đăng Ký</CardTitle>
+        <CardDescription className="text-center text-slate-400">Tạo tài khoản mới để trải nghiệm dịch vụ.</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
