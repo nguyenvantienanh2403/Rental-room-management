@@ -1,19 +1,21 @@
-import axios from 'axios';
+import axios from "axios";
 
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
-  timeout: 10000,
+// Default to /api/v1 as per user's prompt
+const BASE_URL = import.meta.env.VITE_API_URL || "/api/v1";
+
+export const api = axios.create({
+  baseURL: BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
-// Request Interceptor
+// Interceptor to add auth token if available
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem("token");
     if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
@@ -22,20 +24,14 @@ api.interceptors.request.use(
   }
 );
 
-// Response Interceptor
 api.interceptors.response.use(
-  (response) => {
-    return response.data;
-  },
+  (response) => response,
   (error) => {
-    // Handle global errors (e.g., 401 Unauthorized)
+    // Basic error handling for 401
     if (error.response && error.response.status === 401) {
-      // Clear token and redirect to login
-      localStorage.removeItem('accessToken');
-      window.location.href = '/login';
+      localStorage.removeItem("token");
+      // Optional: window.location.href = '/login';
     }
     return Promise.reject(error);
   }
 );
-
-export default api;
