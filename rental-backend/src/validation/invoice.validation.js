@@ -35,6 +35,9 @@ const createInvoice = Joi.object({
   discount: Joi.number().min(0).optional().messages({
     "number.min": "Giảm giá không được là số âm",
   }),
+  dueDate: Joi.date().iso().optional().messages({
+    "date.format": "Ngày đến hạn không hợp lệ",
+  }),
 });
 
 const updateInvoice = Joi.object({
@@ -51,6 +54,9 @@ const updateInvoice = Joi.object({
   ),
   discount: Joi.number().min(0).messages({
     "number.min": "Giảm giá không được là số âm",
+  }),
+  dueDate: Joi.date().iso().messages({
+    "date.format": "Ngày đến hạn không hợp lệ",
   }),
 }).min(1).messages({
   "object.min": "Phải cung cấp ít nhất một trường để cập nhật",

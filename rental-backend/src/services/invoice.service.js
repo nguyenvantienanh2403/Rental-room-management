@@ -1,6 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 import { ApiError, respone } from "../utils/index.js";
-import { invoiceModel, contractModel, meterReadingModel, tenantModel } from "../models/index.js";
+import { invoiceModel, contractModel, meterReadingModel, tenantModel, notificationModel } from "../models/index.js";
 
 const INVOICE_POPULATE = [
   {
@@ -10,6 +10,10 @@ const INVOICE_POPULATE = [
       {
         path: "roomId",
         select: "name buildingId",
+        populate: {
+          path: "buildingId",
+          select: "landlordId",
+        },
       },
       {
         path: "tenantId",
@@ -34,7 +38,7 @@ const calculateTotals = (roomCharge, electricityTotal, waterTotal, otherFees = [
 // CREATE INVOICE
 // ---------------------------------------------------------------------------
 const createInvoiceService = async (invoiceData) => {
-  const { contractId, month, year, otherFees = [], discount = 0 } = invoiceData;
+  const { contractId, month, year, otherFees = [], discount = 0, dueDate } = invoiceData;
 
   // Logic 1: De-duplication
   const existingInvoice = await invoiceModel.findOne({ contractId, month, year });
@@ -78,6 +82,14 @@ const createInvoiceService = async (invoiceData) => {
   // B5: Tính tổng tiền
   const totalAmount = calculateTotals(contract.monthlyPrice, electricityTotal, waterTotal, otherFees, discount);
 
+  // Tính toán Due Date
+  let finalDueDate = dueDate;
+  if (!finalDueDate) {
+    const today = new Date();
+    finalDueDate = new Date(today);
+    finalDueDate.setDate(today.getDate() + 5);
+  }
+
   // Lưu Snapshot
   const newInvoiceData = {
     contractId,
@@ -92,6 +104,7 @@ const createInvoiceService = async (invoiceData) => {
     otherFees,
     discount,
     totalAmount,
+    dueDate: finalDueDate,
     status: "draft",
   };
 
@@ -101,6 +114,22 @@ const createInvoiceService = async (invoiceData) => {
     .findById(newInvoice._id)
     .populate(INVOICE_POPULATE)
     .lean();
+
+  // Bắn thông báo NEW_INVOICE
+  const landlordId = populatedInvoice.contractId?.roomId?.buildingId?.landlordId;
+  const roomName = populatedInvoice.contractId?.roomId?.name;
+  if (landlordId) {
+    await notificationModel.create({
+      recipientId: landlordId,
+      title: "Hóa đơn mới",
+      message: `Hóa đơn tháng ${month}/${year} của ${roomName || "phòng"} đã được tạo thành công.`,
+      type: "NEW_INVOICE",
+      metadata: {
+        invoiceId: newInvoice._id,
+        contractId: contractId
+      }
+    });
+  }
 
   return respone(StatusCodes.CREATED, "Tạo hóa đơn thành công", populatedInvoice);
 };
@@ -120,13 +149,17 @@ const updateInvoiceService = async (invoiceId, updateData) => {
     throw new ApiError(StatusCodes.BAD_REQUEST, "Hóa đơn đã chốt hoặc đã thanh toán, không thể chỉnh sửa số liệu.");
   }
 
-  // Cập nhật phụ phí và giảm giá
+  // Cập nhật phụ phí, giảm giá và ngày đến hạn
   if (updateData.otherFees !== undefined) {
     invoice.otherFees = updateData.otherFees;
   }
   
   if (updateData.discount !== undefined) {
     invoice.discount = updateData.discount;
+  }
+
+  if (updateData.dueDate !== undefined) {
+    invoice.dueDate = updateData.dueDate;
   }
   
   // Tính lại tổng tiền (Giữ nguyên các giá trị snapshot cũ)
@@ -184,6 +217,24 @@ const updateInvoiceStatusService = async (invoiceId, newStatus) => {
     .findById(invoiceId)
     .populate(INVOICE_POPULATE)
     .lean();
+
+  // Bắn thông báo INVOICE_PAID nếu trạng thái là paid
+  if (newStatus === "paid") {
+    const landlordId = updatedInvoice.contractId?.roomId?.buildingId?.landlordId;
+    const roomName = updatedInvoice.contractId?.roomId?.name;
+    if (landlordId) {
+      await notificationModel.create({
+        recipientId: landlordId,
+        title: "Đã thanh toán hóa đơn",
+        message: `Hóa đơn tháng ${updatedInvoice.month}/${updatedInvoice.year} của ${roomName || "phòng"} đã được thanh toán.`,
+        type: "INVOICE_PAID",
+        metadata: {
+          invoiceId: invoiceId,
+          contractId: updatedInvoice.contractId?._id
+        }
+      });
+    }
+  }
 
   return respone(StatusCodes.OK, "Cập nhật trạng thái hóa đơn thành công", updatedInvoice);
 };

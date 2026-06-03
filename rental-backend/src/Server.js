@@ -5,10 +5,14 @@ import cookieParser from "cookie-parser";
 import errorHandler from "./middlewares/error.middleware.js";
 import router from "./routes/index.js";
 import env from "./config/env.config.js";
+import startCronJobs from "./scripts/cronJobs.js";
 
 dotenv.config();
 
 const app = express();
+
+// Khởi chạy Cron Jobs
+startCronJobs();
 
 // Middleware
 // allow parsing of JSON and URL-encoded data

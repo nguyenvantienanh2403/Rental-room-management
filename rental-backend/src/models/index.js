@@ -8,5 +8,6 @@ import tenantModel from "./tenant.model.js";
 import contractModel from "./contract.model.js";
 import invoiceModel from "./invoice.model.js";
 import meterReadingModel from "./meterReading.model.js";
+import notificationModel from "./notification.model.js";
 
-export { permissionModel, roleModel, userModel, token, buildingModel, roomModel, tenantModel, contractModel, invoiceModel, meterReadingModel };
+export { permissionModel, roleModel, userModel, token, buildingModel, roomModel, tenantModel, contractModel, invoiceModel, meterReadingModel, notificationModel };

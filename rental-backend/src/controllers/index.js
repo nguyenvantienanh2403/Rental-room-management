@@ -7,6 +7,8 @@ import * as tenantController from "./tenant.controller.js";
 import * as contractController from "./contract.controller.js";
 import * as invoiceController from "./invoice.controller.js";
 import * as meterReadingController from "./meterReading.controller.js";
+import * as dashboardController from "./dashboard.controller.js";
+import * as notificationController from "./notification.controller.js";
 
 export {
   authController,
@@ -18,4 +20,6 @@ export {
   contractController,
   invoiceController,
   meterReadingController,
+  dashboardController,
+  notificationController,
 };

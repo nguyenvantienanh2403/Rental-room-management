@@ -63,6 +63,10 @@ const invoiceSchema = new Schema(
       required: true,
       min: 0,
     },
+    dueDate: {
+      type: Date,
+      required: true,
+    },
     status: {
       type: String,
       enum: ["draft", "issued", "paid", "cancelled"],

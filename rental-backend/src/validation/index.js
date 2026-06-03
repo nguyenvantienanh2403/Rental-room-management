@@ -5,5 +5,6 @@ import { tenantValidation } from "./tenant.validation.js";
 import { contractValidation } from "./contract.validation.js";
 import { invoiceValidation } from "./invoice.validation.js";
 import { meterReadingValidation } from "./meterReading.validation.js";
+import { notificationValidation } from "./notification.validation.js";
 
-export { userValidation, buildingValidation, roomValidation, tenantValidation, contractValidation, invoiceValidation, meterReadingValidation };
+export { userValidation, buildingValidation, roomValidation, tenantValidation, contractValidation, invoiceValidation, meterReadingValidation, notificationValidation };
