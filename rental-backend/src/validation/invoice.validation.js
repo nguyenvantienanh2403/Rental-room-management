@@ -19,34 +19,38 @@ const createInvoice = Joi.object({
     "number.min": "Năm không hợp lệ",
     "any.required": "Năm là bắt buộc",
   }),
-  oldElectricityIndex: Joi.number().min(0).optional().messages({
-    "number.min": "Chỉ số điện cũ không được là số âm",
-  }),
-  oldWaterIndex: Joi.number().min(0).optional().messages({
-    "number.min": "Chỉ số nước cũ không được là số âm",
-  }),
-  newElectricityIndex: Joi.number().min(0).required().messages({
-    "number.min": "Chỉ số điện mới không được là số âm",
-    "any.required": "Chỉ số điện mới là bắt buộc",
-  }),
-  newWaterIndex: Joi.number().min(0).required().messages({
-    "number.min": "Chỉ số nước mới không được là số âm",
-    "any.required": "Chỉ số nước mới là bắt buộc",
-  }),
-  otherFees: Joi.number().min(0).messages({
-    "number.min": "Phụ phí không được là số âm",
+  otherFees: Joi.array()
+    .items(
+      Joi.object({
+        name: Joi.string().required().messages({
+          "any.required": "Tên phụ phí là bắt buộc",
+        }),
+        amount: Joi.number().min(0).required().messages({
+          "number.min": "Số tiền phụ phí không được là số âm",
+          "any.required": "Số tiền phụ phí là bắt buộc",
+        }),
+      })
+    )
+    .optional(),
+  discount: Joi.number().min(0).optional().messages({
+    "number.min": "Giảm giá không được là số âm",
   }),
 });
 
 const updateInvoice = Joi.object({
-  newElectricityIndex: Joi.number().min(0).messages({
-    "number.min": "Chỉ số điện mới không được là số âm",
-  }),
-  newWaterIndex: Joi.number().min(0).messages({
-    "number.min": "Chỉ số nước mới không được là số âm",
-  }),
-  otherFees: Joi.number().min(0).messages({
-    "number.min": "Phụ phí không được là số âm",
+  otherFees: Joi.array().items(
+    Joi.object({
+      name: Joi.string().required().messages({
+        "any.required": "Tên phụ phí là bắt buộc",
+      }),
+      amount: Joi.number().min(0).required().messages({
+        "number.min": "Số tiền phụ phí không được là số âm",
+        "any.required": "Số tiền phụ phí là bắt buộc",
+      }),
+    })
+  ),
+  discount: Joi.number().min(0).messages({
+    "number.min": "Giảm giá không được là số âm",
   }),
 }).min(1).messages({
   "object.min": "Phải cung cấp ít nhất một trường để cập nhật",

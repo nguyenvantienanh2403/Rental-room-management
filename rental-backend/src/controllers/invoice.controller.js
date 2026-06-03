@@ -31,7 +31,7 @@ const getInvoiceById = catchAsync(async (req, res) => {
   res.status(StatusCodes.OK).json(result);
 });
 
-export const invoiceController = {
+export {
   createInvoice,
   updateInvoice,
   updateInvoiceStatus,

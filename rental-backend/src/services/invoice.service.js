@@ -1,6 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 import { ApiError, respone } from "../utils/index.js";
-import { invoiceModel, contractModel } from "../models/index.js";
+import { invoiceModel, contractModel, meterReadingModel, tenantModel } from "../models/index.js";
 
 const INVOICE_POPULATE = [
   {
@@ -17,21 +17,38 @@ const INVOICE_POPULATE = [
       },
     ],
   },
+  {
+    path: "meterReadingId",
+    select: "electricity water",
+  },
 ];
+
+// Helper to calculate total
+const calculateTotals = (roomCharge, electricityTotal, waterTotal, otherFees = [], discount = 0) => {
+  const sumOtherFees = otherFees.reduce((acc, fee) => acc + fee.amount, 0);
+  const totalAmount = roomCharge + electricityTotal + waterTotal + sumOtherFees - discount;
+  return Math.max(0, totalAmount);
+};
 
 // ---------------------------------------------------------------------------
 // CREATE INVOICE
 // ---------------------------------------------------------------------------
 const createInvoiceService = async (invoiceData) => {
-  const { contractId, month, year, oldElectricityIndex: reqOldElec = 0, oldWaterIndex: reqOldWater = 0, newElectricityIndex, newWaterIndex, otherFees = 0 } = invoiceData;
+  const { contractId, month, year, otherFees = [], discount = 0 } = invoiceData;
 
-  // Logic 1: Chống trùng lặp (De-duplication)
+  // Logic 1: De-duplication
   const existingInvoice = await invoiceModel.findOne({ contractId, month, year });
   if (existingInvoice) {
     throw new ApiError(StatusCodes.BAD_REQUEST, "Hóa đơn cho tháng này đã được khởi tạo trước đó.");
   }
 
-  // Lấy thông tin Contract để chụp giá
+  // B1: Lấy phiếu chốt số
+  const meterReading = await meterReadingModel.findOne({ contractId, month, year });
+  if (!meterReading) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Chưa có phiếu chốt số điện nước cho tháng này.");
+  }
+
+  // B2: Lấy thông tin Contract để lấy đơn giá
   const contract = await contractModel.findById(contractId);
   if (!contract) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy hợp đồng.");
@@ -40,39 +57,42 @@ const createInvoiceService = async (invoiceData) => {
     throw new ApiError(StatusCodes.BAD_REQUEST, "Hợp đồng không còn hoạt động.");
   }
 
-  // Logic 2: Kế thừa số điện nước (Index Inheritance)
-  // Lấy hóa đơn gần nhất của hợp đồng này
-  const lastInvoice = await invoiceModel.findOne({ contractId }).sort({ year: -1, month: -1 });
-  
-  let oldElectricityIndex = reqOldElec;
-  let oldWaterIndex = reqOldWater;
-  
-  if (lastInvoice) {
-    oldElectricityIndex = lastInvoice.newElectricityIndex;
-    oldWaterIndex = lastInvoice.newWaterIndex;
+  // Lấy số lượng người thuê đang ở trong phòng của hợp đồng này
+  const numberOfTenants = await tenantModel.countDocuments({ roomId: contract.roomId, status: "active" });
+
+  // B3: Tính tiền điện
+  const electricityUsed = Math.max(0, meterReading.electricity.newIndex - meterReading.electricity.oldIndex);
+  const electricityTotal = electricityUsed * contract.electricityPrice;
+
+  // B4: Tính tiền nước
+  let waterTotal = 0;
+  if (meterReading.water && meterReading.water.newIndex !== undefined) {
+    // Có chỉ số nước -> tính theo khối
+    const waterUsed = Math.max(0, meterReading.water.newIndex - meterReading.water.oldIndex);
+    waterTotal = waterUsed * contract.waterPrice;
+  } else {
+    // Không có chỉ số nước -> tính theo đầu người
+    waterTotal = contract.waterPrice * numberOfTenants;
   }
 
-  if (newElectricityIndex < oldElectricityIndex) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, `Chỉ số điện mới (${newElectricityIndex}) không được nhỏ hơn chỉ số cũ (${oldElectricityIndex}).`);
-  }
-  
-  if (newWaterIndex < oldWaterIndex) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, `Chỉ số nước mới (${newWaterIndex}) không được nhỏ hơn chỉ số cũ (${oldWaterIndex}).`);
-  }
+  // B5: Tính tổng tiền
+  const totalAmount = calculateTotals(contract.monthlyPrice, electricityTotal, waterTotal, otherFees, discount);
 
-  // Logic 3: Sao chụp giá (Pricing Snapshot) từ Contract
+  // Lưu Snapshot
   const newInvoiceData = {
     contractId,
+    meterReadingId: meterReading._id,
     month,
     year,
-    roomPriceSnapshot: contract.monthlyPrice || 0,
-    electricityPriceSnapshot: contract.electricityPrice || 0,
-    waterPriceSnapshot: contract.waterPrice || 0,
-    oldElectricityIndex,
-    newElectricityIndex,
-    oldWaterIndex,
-    newWaterIndex,
+    roomCharge: contract.monthlyPrice,
+    electricityUnitPrice: contract.electricityPrice,
+    waterUnitPrice: contract.waterPrice,
+    electricityTotal,
+    waterTotal,
     otherFees,
+    discount,
+    totalAmount,
+    status: "draft",
   };
 
   const newInvoice = await invoiceModel.create(newInvoiceData);
@@ -95,31 +115,30 @@ const updateInvoiceService = async (invoiceId, updateData) => {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy hóa đơn.");
   }
 
-  // Logic 4: Khóa dữ liệu (Immutability)
+  // Khóa dữ liệu (Immutability)
   if (invoice.status !== "draft") {
     throw new ApiError(StatusCodes.BAD_REQUEST, "Hóa đơn đã chốt hoặc đã thanh toán, không thể chỉnh sửa số liệu.");
   }
 
-  // Check valid indexes if updated
-  if (updateData.newElectricityIndex !== undefined) {
-    if (updateData.newElectricityIndex < invoice.oldElectricityIndex) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, `Chỉ số điện mới không được nhỏ hơn chỉ số cũ (${invoice.oldElectricityIndex}).`);
-    }
-    invoice.newElectricityIndex = updateData.newElectricityIndex;
-  }
-  
-  if (updateData.newWaterIndex !== undefined) {
-    if (updateData.newWaterIndex < invoice.oldWaterIndex) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, `Chỉ số nước mới không được nhỏ hơn chỉ số cũ (${invoice.oldWaterIndex}).`);
-    }
-    invoice.newWaterIndex = updateData.newWaterIndex;
-  }
-  
+  // Cập nhật phụ phí và giảm giá
   if (updateData.otherFees !== undefined) {
     invoice.otherFees = updateData.otherFees;
   }
   
-  await invoice.save(); // pre-save will calculate totalAmount
+  if (updateData.discount !== undefined) {
+    invoice.discount = updateData.discount;
+  }
+  
+  // Tính lại tổng tiền (Giữ nguyên các giá trị snapshot cũ)
+  invoice.totalAmount = calculateTotals(
+    invoice.roomCharge,
+    invoice.electricityTotal,
+    invoice.waterTotal,
+    invoice.otherFees,
+    invoice.discount
+  );
+
+  await invoice.save();
 
   const updatedInvoice = await invoiceModel
     .findById(invoiceId)
@@ -139,7 +158,7 @@ const updateInvoiceStatusService = async (invoiceId, newStatus) => {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy hóa đơn.");
   }
 
-  // Logic 5: Chuyển trạng thái tuần tự (State Machine)
+  // Chuyển trạng thái tuần tự (State Machine)
   const currentStatus = invoice.status;
   
   if (currentStatus === "paid" || currentStatus === "cancelled") {

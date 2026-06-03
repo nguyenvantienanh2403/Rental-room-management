@@ -7,6 +7,11 @@ const invoiceSchema = new Schema(
       ref: "Contract",
       required: true,
     },
+    meterReadingId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MeterReading",
+      required: true,
+    },
     month: {
       type: Number,
       required: true,
@@ -17,42 +22,38 @@ const invoiceSchema = new Schema(
       type: Number,
       required: true,
     },
-    roomPriceSnapshot: {
+    roomCharge: {
       type: Number,
       required: true,
       min: 0,
     },
-    electricityPriceSnapshot: {
+    electricityUnitPrice: {
       type: Number,
       required: true,
       min: 0,
     },
-    waterPriceSnapshot: {
+    waterUnitPrice: {
       type: Number,
       required: true,
       min: 0,
     },
-    oldElectricityIndex: {
+    electricityTotal: {
       type: Number,
       required: true,
       min: 0,
     },
-    newElectricityIndex: {
+    waterTotal: {
       type: Number,
       required: true,
       min: 0,
     },
-    oldWaterIndex: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    newWaterIndex: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    otherFees: {
+    otherFees: [
+      {
+        name: { type: String, required: true },
+        amount: { type: Number, required: true, min: 0 },
+      },
+    ],
+    discount: {
       type: Number,
       default: 0,
       min: 0,
@@ -68,38 +69,8 @@ const invoiceSchema = new Schema(
       default: "draft",
     },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
-
-// Tính toán totalAmount trước khi validate để pass require
-invoiceSchema.pre("validate", function () {
-  if (
-    this.isModified("newElectricityIndex") ||
-    this.isModified("oldElectricityIndex") ||
-    this.isModified("newWaterIndex") ||
-    this.isModified("oldWaterIndex") ||
-    this.isModified("otherFees")
-  ) {
-    const electricityUsed = Math.max(
-      0,
-      (this.newElectricityIndex || 0) - (this.oldElectricityIndex || 0),
-    );
-    const waterUsed = Math.max(
-      0,
-      (this.newWaterIndex || 0) - (this.oldWaterIndex || 0),
-    );
-
-    const electricityCost =
-      electricityUsed * (this.electricityPriceSnapshot || 0);
-    const waterCost = waterUsed * (this.waterPriceSnapshot || 0);
-
-    this.totalAmount =
-      (this.roomPriceSnapshot || 0) +
-      electricityCost +
-      waterCost +
-      (this.otherFees || 0);
-  }
-});
 
 // Chống trùng lặp mức DB: 1 hợp đồng chỉ có 1 hóa đơn cho 1 tháng cụ thể
 invoiceSchema.index({ contractId: 1, month: 1, year: 1 }, { unique: true });
