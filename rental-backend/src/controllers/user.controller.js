@@ -50,4 +50,20 @@ const deleteUser = catchAsync(async (req, res) => {
   res.status(StatusCodes.OK).json(data);
 });
 
-export { getUserById, getAllUsers, updateProfile, changePassword, deleteUser };
+// ---------------------------------------------------------------------------
+// POST /users/me/request-email-change
+// ---------------------------------------------------------------------------
+const requestEmailChange = catchAsync(async (req, res) => {
+  const data = await userService.requestEmailChangeService(req.user._id, req.body);
+  res.status(StatusCodes.OK).json(data);
+});
+
+// ---------------------------------------------------------------------------
+// POST /users/me/verify-email-change
+// ---------------------------------------------------------------------------
+const verifyEmailChange = catchAsync(async (req, res) => {
+  const data = await userService.verifyEmailChangeService(req.user._id, req.body);
+  res.status(StatusCodes.OK).json(data);
+});
+
+export { getUserById, getAllUsers, updateProfile, changePassword, deleteUser, requestEmailChange, verifyEmailChange };

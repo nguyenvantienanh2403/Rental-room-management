@@ -32,5 +32,17 @@ export const userService = {
       },
     });
     return response.data;
+  },
+
+  // Đổi email (OTP Bước 1)
+  requestEmailChange: async (data) => {
+    const response = await api.post(`/users/me/request-email-change`, data);
+    return response.data;
+  },
+
+  // Đổi email (OTP Bước 2)
+  verifyEmailChange: async (data) => {
+    const response = await api.post(`/users/me/verify-email-change`, data);
+    return response.data;
   }
 };

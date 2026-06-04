@@ -6,6 +6,11 @@ export const tenantService = {
     return response.data;
   },
   
+  getByRoom: async (roomId, params = {}) => {
+    const response = await api.get(`/tenants/room/${roomId}`, { params });
+    return response.data;
+  },
+  
   create: async (tenant) => {
     const response = await api.post('/tenants', tenant);
     return response.data;

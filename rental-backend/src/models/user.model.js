@@ -43,6 +43,9 @@ const userSchema = new Schema(
     },
     passwordResetToken: String,
     passwordResetExpires: Date,
+    newEmailPending: String,
+    emailChangeOTP: String,
+    emailChangeExpires: Date,
   },
   { timestamps: true },
 );

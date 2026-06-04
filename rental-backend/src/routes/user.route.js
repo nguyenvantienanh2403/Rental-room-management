@@ -18,6 +18,12 @@ userRoute.get("/", checkPermission("admin"), userController.getAllUsers);
 // ⚠️ Route này phải đặt TRƯỚC /:id để tránh "avatar" bị match như ObjectId
 userRoute.patch("/avatar", uploadAvatar, uploadController.uploadAvatar);
 
+// POST /users/me/request-email-change
+userRoute.post("/me/request-email-change", userController.requestEmailChange);
+
+// POST /users/me/verify-email-change
+userRoute.post("/me/verify-email-change", userController.verifyEmailChange);
+
 // GET /users/:id — Get user by ID (any authenticated user)
 userRoute.get("/:id", userController.getUserById);
 
