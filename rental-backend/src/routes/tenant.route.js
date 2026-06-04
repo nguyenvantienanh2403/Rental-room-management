@@ -6,6 +6,9 @@ import { tenantValidation } from "../validation/index.js";
 
 const tenantRoute = express.Router();
 
+// GET /tenants — Get all tenants (Requires Auth)
+tenantRoute.get("/", auth, tenantController.getAllTenants);
+
 // GET /tenants/room/:roomId — Get tenants belonging to a room (Requires Auth)
 tenantRoute.get("/room/:roomId", auth, tenantController.getTenantsByRoom);
 

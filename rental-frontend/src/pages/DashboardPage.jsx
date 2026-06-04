@@ -44,7 +44,7 @@ export function DashboardPage() {
     return (
       <div className="h-full w-full bg-neutral flex flex-col items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-slate-400">Đang tải dữ liệu...</p>
+        <p className="mt-4 text-slate-600">Đang tải dữ liệu...</p>
       </div>
     );
   }
@@ -69,8 +69,8 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight text-white">Tổng quan</h2>
-        <p className="text-slate-400">Theo dõi hoạt động kinh doanh nhà trọ của bạn.</p>
+        <h2 className="text-3xl font-bold tracking-tight text-neutral-foreground">Tổng quan</h2>
+        <p className="text-slate-600">Theo dõi hoạt động kinh doanh nhà trọ của bạn.</p>
       </div>
 
       <StatCards data={data} />

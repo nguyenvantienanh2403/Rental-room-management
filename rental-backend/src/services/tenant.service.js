@@ -54,6 +54,19 @@ const createTenantService = async (tenantData) => {
 };
 
 // ---------------------------------------------------------------------------
+// GET ALL TENANTS
+// ---------------------------------------------------------------------------
+const getAllTenantsService = async (queryOptions = {}) => {
+  const tenants = await tenantModel
+    .find({})
+    .populate(TENANT_POPULATE)
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return respone(StatusCodes.OK, "Lấy danh sách tất cả khách thuê thành công", tenants);
+};
+
+// ---------------------------------------------------------------------------
 // GET TENANTS BY ROOM ID
 // ---------------------------------------------------------------------------
 const getTenantsByRoomService = async (roomId) => {
@@ -174,6 +187,7 @@ const deleteTenantService = async (tenantId) => {
 
 export {
   createTenantService,
+  getAllTenantsService,
   getTenantsByRoomService,
   getTenantByIdService,
   updateTenantService,

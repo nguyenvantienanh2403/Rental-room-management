@@ -72,6 +72,43 @@ const getRoomsByBuildingService = async (buildingId, queryOptions = {}) => {
 };
 
 // ---------------------------------------------------------------------------
+// GET ALL ROOMS
+// ---------------------------------------------------------------------------
+const getAllRoomsService = async (queryOptions = {}) => {
+  const { page = 1, limit = 10, status } = queryOptions;
+
+  const filter = {};
+
+  if (status && ["available", "rented", "maintenance"].includes(status)) {
+    filter.status = status;
+  }
+
+  const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+  const limitNum = parseInt(limit, 10);
+
+  const [rooms, totalCount] = await Promise.all([
+    roomModel
+      .find(filter)
+      .populate(ROOM_POPULATE)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .lean(),
+    roomModel.countDocuments(filter),
+  ]);
+
+  return respone(StatusCodes.OK, "Lấy danh sách tất cả phòng thành công", {
+    rooms,
+    pagination: {
+      page: parseInt(page, 10),
+      limit: limitNum,
+      totalCount,
+      totalPages: Math.ceil(totalCount / limitNum),
+    },
+  });
+};
+
+// ---------------------------------------------------------------------------
 // GET ROOM BY SLUG
 // ---------------------------------------------------------------------------
 const getRoomBySlugService = async (slug) => {
@@ -146,6 +183,7 @@ const deleteRoomService = async (roomId) => {
 
 export {
   createRoomService,
+  getAllRoomsService,
   getRoomsByBuildingService,
   getRoomBySlugService,
   updateRoomService,

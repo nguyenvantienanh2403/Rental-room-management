@@ -11,6 +11,14 @@ const createTenant = catchAsync(async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /tenants
+// ---------------------------------------------------------------------------
+const getAllTenants = catchAsync(async (req, res) => {
+  const data = await tenantService.getAllTenantsService(req.query);
+  res.status(StatusCodes.OK).json(data);
+});
+
+// ---------------------------------------------------------------------------
 // GET /tenants/room/:roomId
 // ---------------------------------------------------------------------------
 const getTenantsByRoom = catchAsync(async (req, res) => {
@@ -44,6 +52,7 @@ const deleteTenant = catchAsync(async (req, res) => {
 
 export {
   createTenant,
+  getAllTenants,
   getTenantsByRoom,
   getTenantById,
   updateTenant,

@@ -34,10 +34,10 @@ export function ForgotPasswordForm() {
   };
 
   return (
-    <Card className="w-full max-w-md bg-white/5 backdrop-blur-md shadow-xl border-white/10 text-white">
+    <Card className="w-full max-w-md bg-slate-100 backdrop-blur-md shadow-xl border-white/10 text-neutral-foreground">
       <CardHeader>
         <CardTitle className="text-2xl font-bold text-center text-tertiary">Quên Mật Khẩu</CardTitle>
-        <CardDescription className="text-center text-slate-400">Nhập email của bạn để nhận liên kết khôi phục mật khẩu.</CardDescription>
+        <CardDescription className="text-center text-slate-600">Nhập email của bạn để nhận liên kết khôi phục mật khẩu.</CardDescription>
       </CardHeader>
       <CardContent>
         {success ? (
@@ -71,7 +71,7 @@ export function ForgotPasswordForm() {
       <CardFooter className="flex justify-center">
         <p className="text-sm text-muted-foreground">
           Đã nhớ mật khẩu?{" "}
-          <button onClick={() => navigate("/login")} className="text-primary hover:text-secondary hover:underline transition-colors">
+          <button onClick={() => navigate("/login")} className="text-neutral-foreground hover:underline transition-colors">
             Đăng nhập lại
           </button>
         </p>

@@ -38,10 +38,10 @@ export function LoginForm() {
   };
 
   return (
-    <Card className="w-full max-w-md bg-white/5 backdrop-blur-md shadow-xl border-white/10 text-white">
+    <Card className="w-full max-w-md bg-slate-100 backdrop-blur-md shadow-xl border-white/10 text-neutral-foreground">
       <CardHeader>
         <CardTitle className="text-2xl font-bold text-center text-tertiary">Đăng Nhập</CardTitle>
-        <CardDescription className="text-center text-slate-400">Chào mừng trở lại! Vui lòng đăng nhập vào tài khoản của bạn.</CardDescription>
+        <CardDescription className="text-center text-slate-600">Chào mừng trở lại! Vui lòng đăng nhập vào tài khoản của bạn.</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -77,7 +77,7 @@ export function LoginForm() {
             <button 
               type="button"
               onClick={() => navigate("/forgot-password")} 
-              className="text-sm text-primary hover:text-secondary hover:underline transition-colors"
+              className="text-sm text-neutral-foreground hover:underline transition-colors"
             >
               Quên mật khẩu?
             </button>
@@ -87,7 +87,7 @@ export function LoginForm() {
       <CardFooter className="flex justify-center">
         <p className="text-sm text-muted-foreground">
           Chưa có tài khoản?{" "}
-          <button onClick={() => navigate("/register")} className="text-primary hover:underline">
+          <button onClick={() => navigate("/register")} className="text-neutral-foreground hover:underline">
             Đăng ký ngay
           </button>
         </p>

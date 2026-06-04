@@ -11,6 +11,14 @@ const createRoom = catchAsync(async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /rooms
+// ---------------------------------------------------------------------------
+const getAllRooms = catchAsync(async (req, res) => {
+  const data = await roomService.getAllRoomsService(req.query);
+  res.status(StatusCodes.OK).json(data);
+});
+
+// ---------------------------------------------------------------------------
 // GET /rooms/building/:buildingId
 // ---------------------------------------------------------------------------
 const getRoomsByBuilding = catchAsync(async (req, res) => {
@@ -44,6 +52,7 @@ const deleteRoom = catchAsync(async (req, res) => {
 
 export {
   createRoom,
+  getAllRooms,
   getRoomsByBuilding,
   getRoomBySlug,
   updateRoom,

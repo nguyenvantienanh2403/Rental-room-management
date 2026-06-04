@@ -1,29 +1,29 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #5E17EB;
-  --color-primary-hover: #4b12bc; /* slightly darker primary for hover if needed */
-  --color-secondary: #FF3399;
-  --color-tertiary: #00F5FF;
-  --color-neutral: #1E293B; /* Slate 800 - Harmonizes beautifully with vibrant colors */
-  --color-neutral-foreground: #F8FAFC; /* Slate 50 - High contrast text on dark slate */
+  --color-primary: #E6E6FA; /* Tím Pastel (Lavender) */
+  --color-primary-hover: #D8BFD8; /* Thistle (hover effect) */
+  --color-secondary: #8A2BE2; /* Tím đậm (BlueViolet) */
+  --color-tertiary: #FFD700; /* Vàng chanh (Gold) */
+  --color-neutral: #FFFFFF; /* Trắng sứ */
+  --color-neutral-foreground: #301934; /* Tím thẫm */
 }
 
 @layer base {
   :root {
-    --background: 222 47% 11%; /* Neutral approx */
-    --foreground: 210 40% 98%;
+    --background: 0 0% 98%; /* #FAFAFA */
+    --foreground: 291 35% 15%; /* #301934 */
 
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
 
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 271 91% 65%; /* purple-600 approx */
+    --primary: 271 91% 65%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 330 81% 60%; /* pink-500 approx */
+    --secondary: 330 81% 60%;
     --secondary-foreground: 222.2 47.4% 11.2%;
 
     --muted: 210 40% 96.1%;

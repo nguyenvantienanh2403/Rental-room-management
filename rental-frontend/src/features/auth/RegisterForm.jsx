@@ -43,10 +43,10 @@ export function RegisterForm() {
   };
 
   return (
-    <Card className="w-full max-w-md bg-white/5 backdrop-blur-md shadow-xl border-white/10 text-white">
+    <Card className="w-full max-w-md bg-slate-100 backdrop-blur-md shadow-xl border-white/10 text-neutral-foreground">
       <CardHeader>
         <CardTitle className="text-2xl font-bold text-center text-tertiary">Đăng Ký</CardTitle>
-        <CardDescription className="text-center text-slate-400">Tạo tài khoản mới để trải nghiệm dịch vụ.</CardDescription>
+        <CardDescription className="text-center text-slate-600">Tạo tài khoản mới để trải nghiệm dịch vụ.</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -102,7 +102,7 @@ export function RegisterForm() {
       <CardFooter className="flex justify-center">
         <p className="text-sm text-muted-foreground">
           Đã có tài khoản?{" "}
-          <button onClick={() => navigate("/login")} className="text-primary hover:underline">
+          <button onClick={() => navigate("/login")} className="text-neutral-foreground hover:underline">
             Đăng nhập ngay
           </button>
         </p>

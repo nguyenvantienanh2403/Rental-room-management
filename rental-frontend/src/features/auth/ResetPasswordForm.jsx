@@ -48,10 +48,10 @@ export function ResetPasswordForm() {
   };
 
   return (
-    <Card className="w-full max-w-md bg-white/5 backdrop-blur-md shadow-xl border-white/10 text-white">
+    <Card className="w-full max-w-md bg-slate-100 backdrop-blur-md shadow-xl border-white/10 text-neutral-foreground">
       <CardHeader>
         <CardTitle className="text-2xl font-bold text-center text-tertiary">Đặt Lại Mật Khẩu</CardTitle>
-        <CardDescription className="text-center text-slate-400">Nhập mật khẩu mới cho tài khoản của bạn.</CardDescription>
+        <CardDescription className="text-center text-slate-600">Nhập mật khẩu mới cho tài khoản của bạn.</CardDescription>
       </CardHeader>
       <CardContent>
         {success ? (
@@ -87,7 +87,7 @@ export function ResetPasswordForm() {
                 disabled={isLoading}
               />
             </div>
-            <Button type="submit" className="w-full bg-primary hover:bg-primary-hover hover:text-white transition-colors" disabled={isLoading}>
+            <Button type="submit" className="w-full bg-primary hover:bg-primary-hover hover:text-neutral-foreground transition-colors" disabled={isLoading}>
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Cập Nhật Mật Khẩu"}
             </Button>
           </form>
@@ -95,7 +95,7 @@ export function ResetPasswordForm() {
       </CardContent>
       <CardFooter className="flex justify-center">
         <p className="text-sm text-muted-foreground">
-          <button onClick={() => navigate("/login")} className="text-primary hover:text-secondary hover:underline transition-colors">
+          <button onClick={() => navigate("/login")} className="text-neutral-foreground hover:underline transition-colors">
             Quay lại Đăng nhập
           </button>
         </p>

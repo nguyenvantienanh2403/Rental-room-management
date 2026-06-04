@@ -6,6 +6,9 @@ import { roomValidation } from "../validation/index.js";
 
 const roomRoute = express.Router();
 
+// GET /rooms — Public: Get all rooms
+roomRoute.get("/", roomController.getAllRooms);
+
 // GET /rooms/building/:buildingId — Public: Get rooms in a specific building
 roomRoute.get("/building/:buildingId", roomController.getRoomsByBuilding);
 
