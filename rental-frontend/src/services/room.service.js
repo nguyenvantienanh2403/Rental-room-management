@@ -6,6 +6,11 @@ export const roomService = {
     return response.data;
   },
   
+  getByBuilding: async (buildingId, params = {}) => {
+    const response = await api.get(`/rooms/building/${buildingId}`, { params });
+    return response.data;
+  },
+  
   create: async (room) => {
     const response = await api.post('/rooms', room);
     return response.data;
