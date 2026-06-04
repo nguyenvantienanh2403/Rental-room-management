@@ -1,6 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 import { ApiError, respone } from "../utils/index.js";
 import { buildingModel } from "../models/index.js";
+import { ROLES } from "../constants/index.js";
 
 /**
  * Populate options cho building queries
@@ -12,13 +13,19 @@ const BUILDING_POPULATE = [
   },
 ];
 
+const checkIsAdmin = (user) => {
+  if (!user || !user.role) return false;
+  const roleName = typeof user.role === 'object' ? user.role.name : user.role;
+  return roleName?.toLowerCase() === ROLES.ADMIN;
+};
+
 // ---------------------------------------------------------------------------
 // CREATE BUILDING
 // ---------------------------------------------------------------------------
-const createBuildingService = async (landlordId, buildingData) => {
+const createBuildingService = async (currentUser, buildingData) => {
   const newBuilding = await buildingModel.create({
     ...buildingData,
-    landlordId,
+    landlordId: currentUser._id,
   });
 
   const building = await buildingModel
@@ -30,9 +37,9 @@ const createBuildingService = async (landlordId, buildingData) => {
 };
 
 // ---------------------------------------------------------------------------
-// GET ALL BUILDINGS  (public, phân trang + filter)
+// GET ALL BUILDINGS  (phân trang + filter + data ownership)
 // ---------------------------------------------------------------------------
-const getAllBuildingsService = async (query = {}) => {
+const getAllBuildingsService = async (query = {}, currentUser) => {
   const {
     page = 1,
     limit = 10,
@@ -44,6 +51,11 @@ const getAllBuildingsService = async (query = {}) => {
   } = query;
 
   const filter = {};
+
+  // Data Ownership: Landlord chỉ thấy tòa nhà của mình
+  if (currentUser && !checkIsAdmin(currentUser)) {
+    filter.landlordId = currentUser._id;
+  }
 
   // Default: chỉ hiển thị building active
   if (status && ["active", "inactive"].includes(status)) {
@@ -99,7 +111,7 @@ const getAllBuildingsService = async (query = {}) => {
 // ---------------------------------------------------------------------------
 // GET BUILDING BY SLUG OR ID
 // ---------------------------------------------------------------------------
-const getBuildingBySlugOrIdService = async (identifier) => {
+const getBuildingBySlugOrIdService = async (identifier, currentUser) => {
   // Thử tìm theo slug trước, nếu không có thì tìm theo ID
   let building = await buildingModel
     .findOne({ slug: identifier })
@@ -124,21 +136,29 @@ const getBuildingBySlugOrIdService = async (identifier) => {
     throw new ApiError(StatusCodes.GONE, "Tòa nhà này đã bị vô hiệu hóa");
   }
 
+  // Data Ownership
+  if (currentUser && !checkIsAdmin(currentUser)) {
+    const landlordIdStr = building.landlordId?._id ? building.landlordId._id.toString() : building.landlordId.toString();
+    if (landlordIdStr !== currentUser._id.toString()) {
+      throw new ApiError(StatusCodes.FORBIDDEN, "Bạn không có quyền truy cập tòa nhà này");
+    }
+  }
+
   return respone(StatusCodes.OK, "Lấy thông tin tòa nhà thành công", building);
 };
 
 // ---------------------------------------------------------------------------
 // UPDATE BUILDING
 // ---------------------------------------------------------------------------
-const updateBuildingService = async (currentUserId, buildingId, updateData) => {
+const updateBuildingService = async (currentUser, buildingId, updateData) => {
   const building = await buildingModel.findById(buildingId);
 
   if (!building) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy tòa nhà");
   }
 
-  // Chỉ landlord sở hữu mới được sửa
-  if (building.landlordId.toString() !== currentUserId.toString()) {
+  // Chỉ Admin hoặc Landlord sở hữu mới được sửa
+  if (!checkIsAdmin(currentUser) && building.landlordId.toString() !== currentUser._id.toString()) {
     throw new ApiError(
       StatusCodes.FORBIDDEN,
       "Bạn chỉ có thể cập nhật tòa nhà của chính mình",
@@ -189,15 +209,15 @@ const updateBuildingService = async (currentUserId, buildingId, updateData) => {
 // ---------------------------------------------------------------------------
 // DELETE BUILDING  (Soft delete — status = "inactive")
 // ---------------------------------------------------------------------------
-const deleteBuildingService = async (currentUserId, buildingId) => {
+const deleteBuildingService = async (currentUser, buildingId) => {
   const building = await buildingModel.findById(buildingId);
 
   if (!building) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy tòa nhà");
   }
 
-  // Chỉ landlord sở hữu mới được xóa
-  if (building.landlordId.toString() !== currentUserId.toString()) {
+  // Chỉ Admin hoặc Landlord sở hữu mới được xóa
+  if (!checkIsAdmin(currentUser) && building.landlordId.toString() !== currentUser._id.toString()) {
     throw new ApiError(
       StatusCodes.FORBIDDEN,
       "Bạn chỉ có thể xóa tòa nhà của chính mình",

@@ -6,14 +6,14 @@ import { roomValidation } from "../validation/index.js";
 
 const roomRoute = express.Router();
 
-// GET /rooms — Public: Get all rooms
-roomRoute.get("/", roomController.getAllRooms);
+// GET /rooms — Authenticated: Get all rooms
+roomRoute.get("/", auth, roomController.getAllRooms);
 
-// GET /rooms/building/:buildingId — Public: Get rooms in a specific building
-roomRoute.get("/building/:buildingId", roomController.getRoomsByBuilding);
+// GET /rooms/building/:buildingId — Authenticated: Get rooms in a specific building
+roomRoute.get("/building/:buildingId", auth, roomController.getRoomsByBuilding);
 
-// GET /rooms/:slug — Public: Get room detail by slug
-roomRoute.get("/:slug", roomController.getRoomBySlug);
+// GET /rooms/:slug — Authenticated: Get room detail by slug
+roomRoute.get("/:slug", auth, roomController.getRoomBySlug);
 
 // POST /rooms — Authenticated: Create a new room
 roomRoute.post(

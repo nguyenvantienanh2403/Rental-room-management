@@ -6,7 +6,7 @@ import { tenantService } from "../services/index.js";
 // POST /tenants
 // ---------------------------------------------------------------------------
 const createTenant = catchAsync(async (req, res) => {
-  const data = await tenantService.createTenantService(req.body);
+  const data = await tenantService.createTenantService(req.body, req.user);
   res.status(StatusCodes.CREATED).json(data);
 });
 
@@ -14,7 +14,7 @@ const createTenant = catchAsync(async (req, res) => {
 // GET /tenants
 // ---------------------------------------------------------------------------
 const getAllTenants = catchAsync(async (req, res) => {
-  const data = await tenantService.getAllTenantsService(req.query);
+  const data = await tenantService.getAllTenantsService(req.query, req.user);
   res.status(StatusCodes.OK).json(data);
 });
 
@@ -22,7 +22,7 @@ const getAllTenants = catchAsync(async (req, res) => {
 // GET /tenants/room/:roomId
 // ---------------------------------------------------------------------------
 const getTenantsByRoom = catchAsync(async (req, res) => {
-  const data = await tenantService.getTenantsByRoomService(req.params.roomId);
+  const data = await tenantService.getTenantsByRoomService(req.params.roomId, req.user);
   res.status(StatusCodes.OK).json(data);
 });
 
@@ -30,7 +30,7 @@ const getTenantsByRoom = catchAsync(async (req, res) => {
 // GET /tenants/:id
 // ---------------------------------------------------------------------------
 const getTenantById = catchAsync(async (req, res) => {
-  const data = await tenantService.getTenantByIdService(req.params.id);
+  const data = await tenantService.getTenantByIdService(req.params.id, req.user);
   res.status(StatusCodes.OK).json(data);
 });
 
@@ -38,7 +38,7 @@ const getTenantById = catchAsync(async (req, res) => {
 // PATCH /tenants/:id
 // ---------------------------------------------------------------------------
 const updateTenant = catchAsync(async (req, res) => {
-  const data = await tenantService.updateTenantService(req.params.id, req.body);
+  const data = await tenantService.updateTenantService(req.params.id, req.body, req.user);
   res.status(StatusCodes.OK).json(data);
 });
 
@@ -46,7 +46,7 @@ const updateTenant = catchAsync(async (req, res) => {
 // DELETE /tenants/:id
 // ---------------------------------------------------------------------------
 const deleteTenant = catchAsync(async (req, res) => {
-  const data = await tenantService.deleteTenantService(req.params.id);
+  const data = await tenantService.deleteTenantService(req.params.id, req.user);
   res.status(StatusCodes.OK).json(data);
 });
 

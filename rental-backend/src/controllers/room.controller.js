@@ -6,7 +6,7 @@ import { roomService } from "../services/index.js";
 // POST /rooms
 // ---------------------------------------------------------------------------
 const createRoom = catchAsync(async (req, res) => {
-  const data = await roomService.createRoomService(req.body);
+  const data = await roomService.createRoomService(req.body, req.user);
   res.status(StatusCodes.CREATED).json(data);
 });
 
@@ -14,7 +14,7 @@ const createRoom = catchAsync(async (req, res) => {
 // GET /rooms
 // ---------------------------------------------------------------------------
 const getAllRooms = catchAsync(async (req, res) => {
-  const data = await roomService.getAllRoomsService(req.query);
+  const data = await roomService.getAllRoomsService(req.query, req.user);
   res.status(StatusCodes.OK).json(data);
 });
 
@@ -22,7 +22,7 @@ const getAllRooms = catchAsync(async (req, res) => {
 // GET /rooms/building/:buildingId
 // ---------------------------------------------------------------------------
 const getRoomsByBuilding = catchAsync(async (req, res) => {
-  const data = await roomService.getRoomsByBuildingService(req.params.buildingId, req.query);
+  const data = await roomService.getRoomsByBuildingService(req.params.buildingId, req.query, req.user);
   res.status(StatusCodes.OK).json(data);
 });
 
@@ -30,7 +30,7 @@ const getRoomsByBuilding = catchAsync(async (req, res) => {
 // GET /rooms/:slug
 // ---------------------------------------------------------------------------
 const getRoomBySlug = catchAsync(async (req, res) => {
-  const data = await roomService.getRoomBySlugService(req.params.slug);
+  const data = await roomService.getRoomBySlugService(req.params.slug, req.user);
   res.status(StatusCodes.OK).json(data);
 });
 
@@ -38,7 +38,7 @@ const getRoomBySlug = catchAsync(async (req, res) => {
 // PATCH /rooms/:id
 // ---------------------------------------------------------------------------
 const updateRoom = catchAsync(async (req, res) => {
-  const data = await roomService.updateRoomService(req.params.id, req.body);
+  const data = await roomService.updateRoomService(req.params.id, req.body, req.user);
   res.status(StatusCodes.OK).json(data);
 });
 
@@ -46,7 +46,7 @@ const updateRoom = catchAsync(async (req, res) => {
 // DELETE /rooms/:id
 // ---------------------------------------------------------------------------
 const deleteRoom = catchAsync(async (req, res) => {
-  const data = await roomService.deleteRoomService(req.params.id);
+  const data = await roomService.deleteRoomService(req.params.id, req.user);
   res.status(StatusCodes.OK).json(data);
 });
 

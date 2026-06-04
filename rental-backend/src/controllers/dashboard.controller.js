@@ -3,7 +3,7 @@ import { catchAsync } from "../utils/index.js";
 import { dashboardService } from "../services/index.js";
 
 const getOverview = catchAsync(async (req, res) => {
-  const data = await dashboardService.getOverviewService();
+  const data = await dashboardService.getOverviewService(req.user);
   res.status(StatusCodes.OK).json(data);
 });
 

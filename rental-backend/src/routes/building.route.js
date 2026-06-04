@@ -6,11 +6,11 @@ import { buildingValidation } from "../validation/index.js";
 
 const buildingRoute = express.Router();
 
-// GET /buildings — Public: danh sách buildings
-buildingRoute.get("/", buildingController.getAllBuildings);
+// GET /buildings — Authenticated: danh sách buildings
+buildingRoute.get("/", auth, buildingController.getAllBuildings);
 
-// GET /buildings/:identifier — Public: chi tiết theo slug hoặc id
-buildingRoute.get("/:identifier", buildingController.getBuildingBySlugOrId);
+// GET /buildings/:identifier — Authenticated: chi tiết theo slug hoặc id
+buildingRoute.get("/:identifier", auth, buildingController.getBuildingBySlugOrId);
 
 // POST /buildings — Authenticated: tạo mới
 buildingRoute.post(

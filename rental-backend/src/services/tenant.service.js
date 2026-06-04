@@ -1,6 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 import { ApiError, respone } from "../utils/index.js";
-import { tenantModel, roomModel } from "../models/index.js";
+import { tenantModel, roomModel, buildingModel } from "../models/index.js";
+import { ROLES } from "../constants/index.js";
 
 const TENANT_POPULATE = [
   {
@@ -13,10 +14,37 @@ const TENANT_POPULATE = [
   },
 ];
 
+const checkIsAdmin = (user) => {
+  if (!user || !user.role) return false;
+  const roleName = typeof user.role === 'object' ? user.role.name : user.role;
+  return roleName?.toLowerCase() === ROLES.ADMIN;
+};
+
+// Hàm tiện ích: Kiểm tra quyền sở hữu phòng (thông qua tòa nhà)
+const verifyRoomOwnership = async (roomId, currentUser) => {
+  if (checkIsAdmin(currentUser)) return true;
+  
+  const room = await roomModel.findById(roomId).select('buildingId').populate({ path: 'buildingId', select: 'landlordId' }).lean();
+  if (!room) throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy phòng");
+  if (!room.buildingId) throw new ApiError(StatusCodes.NOT_FOUND, "Phòng này không thuộc tòa nhà nào");
+  
+  const landlordIdStr = room.buildingId.landlordId?._id 
+    ? room.buildingId.landlordId._id.toString() 
+    : room.buildingId.landlordId.toString();
+
+  if (landlordIdStr !== currentUser._id.toString()) {
+    throw new ApiError(StatusCodes.FORBIDDEN, "Bạn không có quyền thao tác trên khách thuê của phòng này");
+  }
+  return true;
+};
+
 // ---------------------------------------------------------------------------
 // CREATE TENANT
 // ---------------------------------------------------------------------------
-const createTenantService = async (tenantData) => {
+const createTenantService = async (tenantData, currentUser) => {
+  // Quyền sở hữu: Chỉ được thêm khách vào phòng của mình
+  await verifyRoomOwnership(tenantData.roomId, currentUser);
+
   // Check if identityCard already exists
   const existingTenant = await tenantModel.findOne({
     identityCard: tenantData.identityCard,
@@ -28,13 +56,8 @@ const createTenantService = async (tenantData) => {
     );
   }
 
-  // Check if room exists
-  const room = await roomModel.findById(tenantData.roomId);
-  if (!room) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy phòng");
-  }
-
   // Capacity check
+  const room = await roomModel.findById(tenantData.roomId);
   const currentTenantsCount = await tenantModel.countDocuments({ roomId: tenantData.roomId, status: "active" });
   if (currentTenantsCount >= room.maxCapacity) {
     throw new ApiError(
@@ -56,9 +79,23 @@ const createTenantService = async (tenantData) => {
 // ---------------------------------------------------------------------------
 // GET ALL TENANTS
 // ---------------------------------------------------------------------------
-const getAllTenantsService = async (queryOptions = {}) => {
+const getAllTenantsService = async (queryOptions = {}, currentUser) => {
+  let filter = {};
+
+  if (!checkIsAdmin(currentUser)) {
+    // Landlord: Lấy danh sách ID các tòa nhà của họ
+    const buildings = await buildingModel.find({ landlordId: currentUser._id }).select('_id').lean();
+    const buildingIds = buildings.map(b => b._id);
+    
+    // Lấy danh sách ID các phòng thuộc các tòa nhà đó
+    const rooms = await roomModel.find({ buildingId: { $in: buildingIds } }).select('_id').lean();
+    const roomIds = rooms.map(r => r._id);
+    
+    filter.roomId = { $in: roomIds };
+  }
+
   const tenants = await tenantModel
-    .find({})
+    .find(filter)
     .populate(TENANT_POPULATE)
     .sort({ createdAt: -1 })
     .lean();
@@ -69,7 +106,9 @@ const getAllTenantsService = async (queryOptions = {}) => {
 // ---------------------------------------------------------------------------
 // GET TENANTS BY ROOM ID
 // ---------------------------------------------------------------------------
-const getTenantsByRoomService = async (roomId) => {
+const getTenantsByRoomService = async (roomId, currentUser) => {
+  await verifyRoomOwnership(roomId, currentUser);
+
   const tenants = await tenantModel
     .find({ roomId })
     .populate(TENANT_POPULATE)
@@ -82,28 +121,25 @@ const getTenantsByRoomService = async (roomId) => {
 // ---------------------------------------------------------------------------
 // GET TENANT BY ID
 // ---------------------------------------------------------------------------
-const getTenantByIdService = async (tenantId) => {
-  const tenant = await tenantModel
-    .findById(tenantId)
-    .populate(TENANT_POPULATE)
-    .lean();
+const getTenantByIdService = async (tenantId, currentUser) => {
+  const tenant = await tenantModel.findById(tenantId).lean();
+  if (!tenant) throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy khách thuê");
+  
+  await verifyRoomOwnership(tenant.roomId, currentUser);
 
-  if (!tenant) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy khách thuê");
-  }
-
-  return respone(StatusCodes.OK, "Lấy thông tin khách thuê thành công", tenant);
+  const populatedTenant = await tenantModel.findById(tenantId).populate(TENANT_POPULATE).lean();
+  return respone(StatusCodes.OK, "Lấy thông tin khách thuê thành công", populatedTenant);
 };
 
 // ---------------------------------------------------------------------------
 // UPDATE TENANT
 // ---------------------------------------------------------------------------
-const updateTenantService = async (tenantId, updateData) => {
+const updateTenantService = async (tenantId, updateData, currentUser) => {
   const tenant = await tenantModel.findById(tenantId);
+  if (!tenant) throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy khách thuê");
 
-  if (!tenant) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy khách thuê");
-  }
+  // Kiểm tra phòng cũ của khách thuê này xem mình có quyền không
+  await verifyRoomOwnership(tenant.roomId, currentUser);
 
   // Check if identityCard is being updated and if it conflicts
   if (
@@ -123,6 +159,9 @@ const updateTenantService = async (tenantId, updateData) => {
 
   // Check if room is being updated and if it exists
   if (updateData.roomId && updateData.roomId !== tenant.roomId.toString()) {
+    // Phải có quyền ở cả phòng mới
+    await verifyRoomOwnership(updateData.roomId, currentUser);
+    
     const room = await roomModel.findById(updateData.roomId);
     if (!room) {
       throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy phòng");
@@ -173,12 +212,11 @@ const updateTenantService = async (tenantId, updateData) => {
 // ---------------------------------------------------------------------------
 // DELETE TENANT
 // ---------------------------------------------------------------------------
-const deleteTenantService = async (tenantId) => {
+const deleteTenantService = async (tenantId, currentUser) => {
   const tenant = await tenantModel.findById(tenantId);
+  if (!tenant) throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy khách thuê");
 
-  if (!tenant) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy khách thuê");
-  }
+  await verifyRoomOwnership(tenant.roomId, currentUser);
 
   await tenantModel.findByIdAndDelete(tenantId);
 

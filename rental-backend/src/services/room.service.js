@@ -1,6 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 import { ApiError, respone } from "../utils/index.js";
 import { roomModel, buildingModel } from "../models/index.js";
+import { ROLES } from "../constants/index.js";
 
 const ROOM_POPULATE = [
   {
@@ -14,15 +15,35 @@ const ROOM_POPULATE = [
   },
 ];
 
+const checkIsAdmin = (user) => {
+  if (!user || !user.role) return false;
+  const roleName = typeof user.role === 'object' ? user.role.name : user.role;
+  return roleName?.toLowerCase() === ROLES.ADMIN;
+};
+
+// Hàm tiện ích: Lấy tất cả ID tòa nhà của một Landlord
+const getLandlordBuildingIds = async (landlordId) => {
+  const buildings = await buildingModel.find({ landlordId }).select('_id').lean();
+  return buildings.map(b => b._id);
+};
+
+// Hàm tiện ích: Kiểm tra quyền sở hữu tòa nhà
+const verifyBuildingOwnership = async (buildingId, currentUser) => {
+  if (checkIsAdmin(currentUser)) return true;
+  const building = await buildingModel.findById(buildingId).select('landlordId').lean();
+  if (!building) throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy tòa nhà");
+  if (building.landlordId.toString() !== currentUser._id.toString()) {
+    throw new ApiError(StatusCodes.FORBIDDEN, "Bạn không có quyền thao tác trên tòa nhà này");
+  }
+  return true;
+};
+
 // ---------------------------------------------------------------------------
 // CREATE ROOM
 // ---------------------------------------------------------------------------
-const createRoomService = async (roomData) => {
-  // Check if building exists
-  const building = await buildingModel.findById(roomData.buildingId);
-  if (!building) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy tòa nhà");
-  }
+const createRoomService = async (roomData, currentUser) => {
+  // Check ownership of building
+  await verifyBuildingOwnership(roomData.buildingId, currentUser);
 
   const newRoom = await roomModel.create(roomData);
 
@@ -37,9 +58,11 @@ const createRoomService = async (roomData) => {
 // ---------------------------------------------------------------------------
 // GET ROOMS BY BUILDING ID
 // ---------------------------------------------------------------------------
-const getRoomsByBuildingService = async (buildingId, queryOptions = {}) => {
-  const { page = 1, limit = 10, status } = queryOptions;
+const getRoomsByBuildingService = async (buildingId, queryOptions = {}, currentUser) => {
+  // Kiểm tra quyền xem building này
+  await verifyBuildingOwnership(buildingId, currentUser);
 
+  const { page = 1, limit = 10, status } = queryOptions;
   const filter = { buildingId };
 
   if (status && ["available", "rented", "maintenance"].includes(status)) {
@@ -72,12 +95,17 @@ const getRoomsByBuildingService = async (buildingId, queryOptions = {}) => {
 };
 
 // ---------------------------------------------------------------------------
-// GET ALL ROOMS
+// GET ALL ROOMS (Xử lý Data Ownership toàn cục)
 // ---------------------------------------------------------------------------
-const getAllRoomsService = async (queryOptions = {}) => {
+const getAllRoomsService = async (queryOptions = {}, currentUser) => {
   const { page = 1, limit = 10, status } = queryOptions;
-
   const filter = {};
+
+  // Data ownership: Nếu không phải admin, chỉ lấy phòng thuộc các tòa nhà của mình
+  if (!checkIsAdmin(currentUser)) {
+    const allowedBuildingIds = await getLandlordBuildingIds(currentUser._id);
+    filter.buildingId = { $in: allowedBuildingIds };
+  }
 
   if (status && ["available", "rented", "maintenance"].includes(status)) {
     filter.status = status;
@@ -111,12 +139,15 @@ const getAllRoomsService = async (queryOptions = {}) => {
 // ---------------------------------------------------------------------------
 // GET ROOM BY SLUG
 // ---------------------------------------------------------------------------
-const getRoomBySlugService = async (slug) => {
+const getRoomBySlugService = async (slug, currentUser) => {
   const room = await roomModel.findOne({ slug }).populate(ROOM_POPULATE).lean();
 
   if (!room) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy phòng");
   }
+
+  // Check ownership
+  await verifyBuildingOwnership(room.buildingId._id || room.buildingId, currentUser);
 
   return respone(StatusCodes.OK, "Lấy thông tin phòng thành công", room);
 };
@@ -124,12 +155,15 @@ const getRoomBySlugService = async (slug) => {
 // ---------------------------------------------------------------------------
 // UPDATE ROOM
 // ---------------------------------------------------------------------------
-const updateRoomService = async (roomId, updateData) => {
+const updateRoomService = async (roomId, updateData, currentUser) => {
   const room = await roomModel.findById(roomId);
 
   if (!room) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy phòng");
   }
+
+  // Check ownership
+  await verifyBuildingOwnership(room.buildingId, currentUser);
 
   const allowedFields = [
     "name",
@@ -169,12 +203,15 @@ const updateRoomService = async (roomId, updateData) => {
 // ---------------------------------------------------------------------------
 // DELETE ROOM
 // ---------------------------------------------------------------------------
-const deleteRoomService = async (roomId) => {
+const deleteRoomService = async (roomId, currentUser) => {
   const room = await roomModel.findById(roomId);
 
   if (!room) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy phòng");
   }
+
+  // Check ownership
+  await verifyBuildingOwnership(room.buildingId, currentUser);
 
   await roomModel.findByIdAndDelete(roomId);
 
