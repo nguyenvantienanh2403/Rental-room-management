@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Search, Loader2, Filter, Printer, Copy, AlertCircle, Save, X } from "lucide-react";
+import { Search, Loader2, Filter, Printer, Copy, AlertCircle, Save, X, Zap, Plus } from "lucide-react";
 import { invoiceService } from "../services/invoice.service";
 import { contractService } from "../services/contract.service";
 import { buildingService } from "../services/building.service";
 import { InvoiceTable } from "../features/invoice/InvoiceTable";
 import { InvoicePrintTemplate } from "../features/invoice/InvoicePrintTemplate";
+import { BulkCreateInvoiceModal } from "../features/invoice/BulkCreateInvoiceModal";
 import { Modal } from "../components/ui/Modal";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -24,6 +25,7 @@ export function InvoicePage() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -221,6 +223,10 @@ export function InvoicePage() {
     }
   };
 
+  const handleAddNew = () => {
+    setIsCreateModalOpen(true);
+  };
+
   const filteredInvoices = invoices.filter(invoice => {
     const term = searchTerm.toLowerCase();
     const tenantName = (invoice.contractId?.tenantId?.fullName || '').toLowerCase();
@@ -234,11 +240,16 @@ export function InvoicePage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-slate-900">Hóa đơn</h2>
-          <p className="text-slate-500">Quản lý hóa đơn điện nước và dịch vụ hàng tháng.</p>
+          <p className="text-slate-500">Quản lý và theo dõi trạng thái thanh toán.</p>
         </div>
-        <Button onClick={() => setIsCreateModalOpen(true)} className="bg-primary hover:bg-primary-hover text-neutral-foreground border-none shadow-sm flex items-center gap-2">
-          <Printer className="h-4 w-4" /> Tạo Hóa Đơn
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setIsBulkModalOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white border-none shadow-sm flex items-center gap-2">
+            <Zap className="h-4 w-4" /> Tạo Hàng Loạt
+          </Button>
+          <Button onClick={handleAddNew} className="bg-primary hover:bg-primary-hover text-white border-none shadow-sm flex items-center gap-2">
+            <Plus className="h-4 w-4" /> Tạo Hóa Đơn
+          </Button>
+        </div>
       </div>
 
       <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4 items-center justify-between">
@@ -445,6 +456,16 @@ export function InvoicePage() {
           </div>
         </form>
       </Modal>
+
+      {/* BULK CREATE INVOICE MODAL */}
+      <BulkCreateInvoiceModal
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+        contracts={contracts}
+        buildings={buildings}
+        invoices={invoices}
+        onSuccess={fetchInvoices}
+      />
 
     </div>
   );

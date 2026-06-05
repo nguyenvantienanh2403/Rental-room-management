@@ -5,6 +5,7 @@ import { contractService } from "../services/contract.service";
 import { invoiceService } from "../services/invoice.service";
 import { buildingService } from "../services/building.service";
 import { MeterReadingTable } from "../features/meter-reading/MeterReadingTable";
+import { BulkMeterReadingModal } from "../features/meter-reading/BulkMeterReadingModal";
 import { Modal } from "../components/ui/Modal";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -21,6 +22,7 @@ export function MeterReadingPage() {
   const [selectedMonthFilter, setSelectedMonthFilter] = useState("all");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   
@@ -250,9 +252,14 @@ export function MeterReadingPage() {
           <h2 className="text-3xl font-bold tracking-tight text-slate-900">Điện Nước</h2>
           <p className="text-slate-500">Chốt chỉ số điện nước hàng tháng cho các phòng.</p>
         </div>
-        <Button onClick={handleAddNew} className="bg-primary hover:bg-primary-hover text-white border-none shadow-sm flex items-center gap-2">
-          <Plus className="h-4 w-4" /> Ghi Điện Nước
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setIsBulkModalOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white border-none shadow-sm flex items-center gap-2">
+            <Zap className="h-4 w-4" /> Ghi Hàng Loạt
+          </Button>
+          <Button onClick={handleAddNew} className="bg-primary hover:bg-primary-hover text-white border-none shadow-sm flex items-center gap-2">
+            <Plus className="h-4 w-4" /> Ghi Lẻ
+          </Button>
+        </div>
       </div>
 
       <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4 items-center">
@@ -403,6 +410,16 @@ export function MeterReadingPage() {
           </div>
         </div>
       </Modal>
+
+      {/* BULK METER READING MODAL */}
+      <BulkMeterReadingModal
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+        contracts={contracts}
+        readings={readings}
+        buildings={buildings}
+        onSuccess={fetchData}
+      />
 
     </div>
   );
