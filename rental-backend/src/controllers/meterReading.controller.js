@@ -22,10 +22,27 @@ const deleteMeterReading = catchAsync(async (req, res) => {
   res.status(StatusCodes.OK).json(result);
 });
 
+import tenantModel from "../models/tenant.model.js";
+import contractModel from "../models/contract.model.js";
+
 const getAllMeterReadings = catchAsync(async (req, res) => {
-  const result = await meterReadingService.getAllMeterReadingsService(
-    req.query,
-  );
+  let query = { ...req.query };
+  const userRole = req.user.role?.name || req.user.role;
+  if (userRole === "user") {
+    const tenant = await tenantModel.findOne({ userId: req.user._id });
+    if (tenant) {
+      const contract = await contractModel.findOne({ tenantId: tenant._id });
+      if (contract) {
+        query.contractId = contract._id;
+      } else {
+        query.contractId = "000000000000000000000000";
+      }
+    } else {
+      query.contractId = "000000000000000000000000";
+    }
+  }
+
+  const result = await meterReadingService.getAllMeterReadingsService(query);
   res.status(StatusCodes.OK).json(result);
 });
 

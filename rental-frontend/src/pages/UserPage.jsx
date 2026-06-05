@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
-import { Search, Loader2, Trash2 } from "lucide-react";
+import { Search, Loader2, Trash2, Plus, Building2 } from "lucide-react";
 import { userService } from "../services/user.service";
 import { UserTable } from "../features/user/UserTable";
 import { Modal } from "../components/ui/Modal";
 import { Button } from "../components/ui/Button";
+import { Input } from "../components/ui/Input";
+import toast from "react-hot-toast";
 
 export function UserPage() {
   const [users, setUsers] = useState([]);
@@ -13,6 +15,10 @@ export function UserPage() {
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [landlordData, setLandlordData] = useState({ username: "", email: "", password: "" });
+
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -51,10 +57,31 @@ export function UserPage() {
     try {
       const userId = selectedUser._id || selectedUser.id;
       await userService.delete(userId);
+      toast.success("Đã vô hiệu hóa tài khoản thành công!");
       await fetchUsers();
       setIsDeleteModalOpen(false);
     } catch (error) {
-      alert(error.response?.data?.message || "Xóa thất bại");
+      toast.error(error.response?.data?.message || "Xóa thất bại");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCreateLandlord = async (e) => {
+    e.preventDefault();
+    if (!landlordData.username || !landlordData.email || !landlordData.password) {
+      return toast.error("Vui lòng điền đầy đủ thông tin");
+    }
+
+    setIsSaving(true);
+    try {
+      await userService.createLandlord(landlordData);
+      toast.success("Tạo tài khoản Chủ nhà thành công!");
+      setIsCreateModalOpen(false);
+      setLandlordData({ username: "", email: "", password: "" });
+      fetchUsers();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Tạo tài khoản thất bại");
     } finally {
       setIsSaving(false);
     }
@@ -74,6 +101,9 @@ export function UserPage() {
           <h2 className="text-3xl font-bold tracking-tight text-slate-900">Quản lý người dùng</h2>
           <p className="text-slate-500">Xem và quản lý các tài khoản trong hệ thống (Chỉ dành cho Admin).</p>
         </div>
+        <Button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-2">
+          <Plus className="w-4 h-4" /> Thêm Chủ Nhà
+        </Button>
       </div>
 
       {errorMsg && (
@@ -115,6 +145,49 @@ export function UserPage() {
       ) : (
         <UserTable users={filteredUsers} onDelete={handleDeleteClick} />
       )}
+
+      {/* MODAL TẠO CHỦ NHÀ */}
+      <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="Tạo tài khoản Chủ nhà (Landlord)">
+        <form onSubmit={handleCreateLandlord} className="space-y-4">
+          <div className="bg-blue-50 text-blue-800 text-sm p-3 rounded-lg flex items-start gap-2 border border-blue-100 mb-4">
+            <Building2 className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <p>Tài khoản này sẽ được cấp quyền <strong>Landlord</strong>, có thể quản lý tòa nhà, phòng, và khách thuê.</p>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700">Tên đăng nhập</label>
+            <Input 
+              placeholder="Nhập username" 
+              value={landlordData.username} 
+              onChange={(e) => setLandlordData({...landlordData, username: e.target.value})} 
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700">Email</label>
+            <Input 
+              type="email" 
+              placeholder="Nhập email chủ nhà" 
+              value={landlordData.email} 
+              onChange={(e) => setLandlordData({...landlordData, email: e.target.value})} 
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700">Mật khẩu</label>
+            <Input 
+              type="password" 
+              placeholder="Khởi tạo mật khẩu" 
+              value={landlordData.password} 
+              onChange={(e) => setLandlordData({...landlordData, password: e.target.value})} 
+            />
+          </div>
+          <div className="pt-4 flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={() => setIsCreateModalOpen(false)}>Hủy</Button>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Tạo tài khoản
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* MODAL XÁC NHẬN XÓA */}
       <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} title="Xác nhận vô hiệu hóa">

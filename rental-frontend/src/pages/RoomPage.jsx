@@ -3,6 +3,7 @@ import { Plus, Loader2, Trash2, DoorOpen, Building, CheckCircle2, Maximize, User
 import { roomService } from "../services/room.service";
 import { buildingService } from "../services/building.service";
 import { RoomCard } from "../features/room/RoomCard";
+import { ImageCarousel } from "../components/ui/ImageCarousel";
 import { Modal } from "../components/ui/Modal";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -30,6 +31,8 @@ export function RoomPage() {
     amenities: '',
     status: 'available' 
   });
+  const [imageFiles, setImageFiles] = useState([]);
+  const [existingImages, setExistingImages] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
 
   // Load buildings first
@@ -93,6 +96,8 @@ export function RoomPage() {
       amenities: '',
       status: 'available' 
     });
+    setImageFiles([]);
+    setExistingImages([]);
     setIsFormModalOpen(true);
   };
 
@@ -107,6 +112,8 @@ export function RoomPage() {
       amenities: Array.isArray(room.amenities) ? room.amenities.join(", ") : "",
       status: room.status || 'available'
     });
+    setImageFiles([]);
+    setExistingImages(room.images || []);
     setIsFormModalOpen(true);
   };
 
@@ -135,12 +142,33 @@ export function RoomPage() {
         ? formData.amenities.split(",").map(item => item.trim()).filter(Boolean)
         : [];
 
+      let uploadedImageUrls = [];
+      if (imageFiles.length > 0) {
+        toast.loading("Đang tải ảnh lên...", { id: toastId });
+        const uploadData = new FormData();
+        imageFiles.forEach(file => uploadData.append("images", file));
+        const uploadRes = await roomService.uploadImages(uploadData);
+        
+        // uploadRes could be { data: [...] } or just [...]
+        let extractedUrls = uploadRes;
+        if (uploadRes && uploadRes.data) {
+          extractedUrls = uploadRes.data;
+        }
+        
+        if (Array.isArray(extractedUrls)) {
+          uploadedImageUrls = extractedUrls;
+        } else if (typeof extractedUrls === 'string') {
+          uploadedImageUrls = [extractedUrls];
+        }
+      }
+
       const submitData = {
         ...formData,
         price: Number(formData.price),
         area: Number(formData.area),
         maxCapacity: Number(formData.maxCapacity),
-        amenities: amenitiesArray
+        amenities: amenitiesArray,
+        images: [...existingImages, ...uploadedImageUrls]
       };
 
       if (selectedRoom) {
@@ -320,6 +348,31 @@ export function RoomPage() {
               />
               <p className="text-xs text-slate-500 mt-1">Ngăn cách các tiện ích bằng dấu phẩy (,)</p>
             </div>
+
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Hình ảnh phòng</label>
+              <input 
+                type="file" 
+                multiple 
+                accept="image/*"
+                onChange={(e) => setImageFiles(Array.from(e.target.files))}
+                className="flex w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none"
+              />
+              {existingImages.length > 0 && (
+                <div className="mt-2 flex gap-2 flex-wrap">
+                  {existingImages.map((img, idx) => (
+                    <div key={idx} className="relative w-16 h-16 rounded overflow-hidden border">
+                      <img src={img} alt="room" className="w-full h-full object-cover" />
+                      <button 
+                        type="button"
+                        onClick={() => setExistingImages(existingImages.filter((_, i) => i !== idx))}
+                        className="absolute top-0 right-0 bg-red-500 text-white rounded-bl px-1 text-xs"
+                      >X</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           
           <div className="pt-4 flex justify-end gap-3 border-t border-slate-100">
@@ -336,6 +389,12 @@ export function RoomPage() {
       <Modal isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} title="Chi tiết Phòng">
         {selectedRoom && (
           <div className="space-y-6">
+            {selectedRoom.images && selectedRoom.images.length > 0 && (
+              <div className="h-64 w-full rounded-xl overflow-hidden shadow-sm border border-slate-100">
+                <ImageCarousel images={selectedRoom.images} altText={selectedRoom.name} />
+              </div>
+            )}
+            
             <div className="flex items-center gap-4 border-b border-slate-100 pb-5">
               <div className={`p-4 rounded-xl shadow-sm ${selectedRoom.status === 'rented' ? 'bg-primary/10 text-primary' : 'bg-green-50 text-green-600'}`}>
                 <DoorOpen className="h-10 w-10" />

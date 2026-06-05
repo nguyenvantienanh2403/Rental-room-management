@@ -3,8 +3,15 @@ import { roomController } from "../controllers/index.js";
 import auth from "../middlewares/auth.middleware.js";
 import validate from "../middlewares/validate.middleware.js";
 import { roomValidation } from "../validation/index.js";
+import { uploadMultipleImages } from "../middlewares/upload.middleware.js";
 
 const roomRoute = express.Router();
+
+// POST /rooms/upload-images — Authenticated: Upload images
+roomRoute.post("/upload-images", auth, uploadMultipleImages, roomController.uploadRoomImages);
+
+// GET /rooms/public — Public: Get all available rooms for marketplace
+roomRoute.get("/public", roomController.getPublicRooms);
 
 // GET /rooms — Authenticated: Get all rooms
 roomRoute.get("/", auth, roomController.getAllRooms);

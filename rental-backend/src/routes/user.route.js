@@ -14,6 +14,9 @@ userRoute.use(auth);
 // GET /users — Admin only: list all users
 userRoute.get("/", checkPermission("admin"), userController.getAllUsers);
 
+// POST /users/landlord — Admin only: create a landlord
+userRoute.post("/landlord", checkPermission("admin"), userController.createLandlord);
+
 // PATCH /users/avatar — Upload avatar (self only, dùng req.user._id)
 // ⚠️ Route này phải đặt TRƯỚC /:id để tránh "avatar" bị match như ObjectId
 userRoute.patch("/avatar", uploadAvatar, uploadController.uploadAvatar);

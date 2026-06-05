@@ -5,6 +5,19 @@ export const roomService = {
     const response = await api.get('/rooms', { params });
     return response.data;
   },
+
+  getPublic: async (params = {}) => {
+    const response = await api.get('/rooms/public', { params });
+    return response.data;
+  },
+
+  uploadImages: async (formData) => {
+    // Requires Content-Type multipart/form-data
+    const response = await api.post('/rooms/upload-images', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
+  },
   
   getByBuilding: async (buildingId, params = {}) => {
     const response = await api.get(`/rooms/building/${buildingId}`, { params });

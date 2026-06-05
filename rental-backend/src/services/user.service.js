@@ -343,6 +343,36 @@ const verifyEmailChangeService = async (userId, data) => {
   return respone(StatusCodes.OK, "Đổi địa chỉ email thành công");
 };
 
+// ---------------------------------------------------------------------------
+// CREATE LANDLORD (Admin Only)
+// ---------------------------------------------------------------------------
+const createLandlordService = async (userData) => {
+  const { username, email, password } = userData;
+  const existingUser = await userModel.findOne({ email });
+  if (existingUser) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Email đã được sử dụng");
+  }
+
+  // Lấy role landlord từ DB
+  let landlordRole = await import("../models/index.js").then(m => m.roleModel.findOne({ name: "landlord" }));
+  if (!landlordRole) {
+    landlordRole = await import("../models/index.js").then(m => m.roleModel.create({ name: "landlord", permissions: [] }));
+  }
+
+  const newUser = await userModel.create({
+    username,
+    email,
+    password,
+    role: landlordRole._id,
+  });
+
+  return respone(StatusCodes.CREATED, "Tạo tài khoản Chủ nhà thành công", {
+    _id: newUser._id,
+    username: newUser.username,
+    email: newUser.email,
+  });
+};
+
 export {
   getUserByIdService,
   getAllUsersService,
@@ -351,4 +381,5 @@ export {
   deleteUserService,
   requestEmailChangeService,
   verifyEmailChangeService,
+  createLandlordService,
 };

@@ -5,24 +5,26 @@ import bcrypt from "bcrypt";
 import env from "../config/env.config.js";
 
 const registerService = async (userData) => {
-  const { username, email, password } = userData;
+  const { username, email, password, fullName, phoneNumber, identityCard, homeTown } = userData;
   const existingUser = await userModel.findOne({ email });
   if (existingUser) {
     throw new ApiError(StatusCodes.BAD_REQUEST, "Email đã được sử dụng");
   }
 
-  const defaultRole = await roleModel.findOne({ name: "User" });
+  let defaultRole = await roleModel.findOne({ name: "user" });
   if (!defaultRole) {
-    throw new ApiError(
-      StatusCodes.INTERNAL_SERVER_ERROR,
-      "Chưa cấu hình role mặc định 'User'",
-    );
+    // Tự động tạo role user (khách thuê) nếu chưa có trong DB để tránh lỗi 500
+    defaultRole = await roleModel.create({ name: "user", permissions: [] });
   }
 
   const newUser = await userModel.create({
     username,
     email,
     password,
+    fullName,
+    phoneNumber,
+    identityCard,
+    homeTown,
     role: defaultRole._id,
   });
   return respone(StatusCodes.CREATED, "Đăng ký thành công", {

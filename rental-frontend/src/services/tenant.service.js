@@ -16,6 +16,11 @@ export const tenantService = {
     return response.data;
   },
 
+  rent: async (roomId) => {
+    const response = await api.post('/tenants/rent', { roomId });
+    return response.data;
+  },
+
   update: async (id, updatedData) => {
     const response = await api.patch(`/tenants/${id}`, updatedData);
     return response.data;

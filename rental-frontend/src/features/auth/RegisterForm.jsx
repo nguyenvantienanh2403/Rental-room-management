@@ -9,7 +9,16 @@ import { Loader2 } from "lucide-react";
 
 export function RegisterForm() {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({ name: "", email: "", password: "", confirmPassword: "" });
+  const [formData, setFormData] = useState({ 
+    username: "",
+    fullName: "",
+    email: "", 
+    phoneNumber: "",
+    identityCard: "",
+    homeTown: "",
+    password: "", 
+    confirmPassword: "" 
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -22,87 +31,96 @@ export function RegisterForm() {
     e.preventDefault();
     setError("");
     
-    if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
-      return setError("Vui lòng điền đầy đủ thông tin.");
+    const { username, fullName, email, phoneNumber, identityCard, homeTown, password, confirmPassword } = formData;
+    
+    if (!username || !fullName || !email || !phoneNumber || !identityCard || !homeTown || !password || !confirmPassword) {
+      return setError("Vui lòng điền đầy đủ thông tin bắt buộc.");
     }
     
-    if (formData.password !== formData.confirmPassword) {
+    if (password !== confirmPassword) {
       return setError("Mật khẩu xác nhận không khớp.");
     }
 
     setIsLoading(true);
     try {
-      const { confirmPassword, ...registerData } = formData;
+      const { confirmPassword: _, ...registerData } = formData;
       await authService.register(registerData);
       navigate("/login");
     } catch (err) {
-      setError(err.response?.data?.message || "Đăng ký thất bại. Vui lòng thử lại sau.");
+      setError(err.response?.data?.message || err.message || "Đăng ký thất bại. Vui lòng thử lại sau.");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <Card className="w-full max-w-md bg-slate-100 backdrop-blur-md shadow-xl border-white/10 text-neutral-foreground">
-      <CardHeader>
-        <CardTitle className="text-2xl font-bold text-center text-tertiary">Đăng Ký</CardTitle>
-        <CardDescription className="text-center text-slate-600">Tạo tài khoản mới để trải nghiệm dịch vụ.</CardDescription>
+    <Card className="w-full max-w-md bg-slate-100 backdrop-blur-md shadow-xl border-white/10 text-neutral-foreground max-h-[90vh] overflow-y-auto">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-2xl font-bold text-center text-tertiary">Đăng Ký Tài Khoản</CardTitle>
+        <CardDescription className="text-center text-slate-600">Đăng ký để trở thành khách thuê trên hệ thống.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
+            <Alert variant="destructive" className="py-2">
+              <AlertDescription className="text-sm">{error}</AlertDescription>
             </Alert>
           )}
-          <div className="space-y-2">
-            <Input
-              name="name"
-              placeholder="Họ và tên"
-              value={formData.name}
-              onChange={handleChange}
-              disabled={isLoading}
-            />
+          
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-600 uppercase">Tên đăng nhập *</label>
+              <Input name="username" placeholder="nguyenvana" value={formData.username} onChange={handleChange} disabled={isLoading} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-600 uppercase">Họ và tên *</label>
+              <Input name="fullName" placeholder="Nguyễn Văn A" value={formData.fullName} onChange={handleChange} disabled={isLoading} />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Input
-              name="email"
-              type="email"
-              placeholder="Email"
-              value={formData.email}
-              onChange={handleChange}
-              disabled={isLoading}
-            />
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-600 uppercase">Email *</label>
+            <Input name="email" type="email" placeholder="example@gmail.com" value={formData.email} onChange={handleChange} disabled={isLoading} />
           </div>
-          <div className="space-y-2">
-            <Input
-              name="password"
-              type="password"
-              placeholder="Mật khẩu"
-              value={formData.password}
-              onChange={handleChange}
-              disabled={isLoading}
-            />
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-600 uppercase">Số điện thoại *</label>
+              <Input name="phoneNumber" placeholder="0987654321" value={formData.phoneNumber} onChange={handleChange} disabled={isLoading} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-600 uppercase">Số CMND/CCCD *</label>
+              <Input name="identityCard" placeholder="001092..." value={formData.identityCard} onChange={handleChange} disabled={isLoading} />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Input
-              name="confirmPassword"
-              type="password"
-              placeholder="Xác nhận mật khẩu"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              disabled={isLoading}
-            />
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-600 uppercase">Quê quán *</label>
+            <Input name="homeTown" placeholder="Hà Nội, Việt Nam" value={formData.homeTown} onChange={handleChange} disabled={isLoading} />
           </div>
-          <Button type="submit" className="w-full bg-primary hover:bg-primary-hover" disabled={isLoading}>
-            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Đăng Ký"}
-          </Button>
+
+          <div className="grid grid-cols-2 gap-3 pt-2">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-600 uppercase">Mật khẩu *</label>
+              <Input name="password" type="password" placeholder="••••••••" value={formData.password} onChange={handleChange} disabled={isLoading} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-600 uppercase">Nhập lại *</label>
+              <Input name="confirmPassword" type="password" placeholder="••••••••" value={formData.confirmPassword} onChange={handleChange} disabled={isLoading} />
+            </div>
+          </div>
+
+          <div className="pt-4">
+            <Button type="submit" className="w-full bg-primary hover:bg-primary-hover" disabled={isLoading}>
+              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Đăng Ký"}
+            </Button>
+          </div>
         </form>
       </CardContent>
-      <CardFooter className="flex justify-center">
+      <CardFooter className="flex justify-center border-t border-slate-200/20 pt-4 pb-4">
         <p className="text-sm text-muted-foreground">
           Đã có tài khoản?{" "}
-          <button onClick={() => navigate("/login")} className="text-neutral-foreground hover:underline">
+          <button onClick={() => navigate("/login")} className="text-primary hover:underline font-medium">
             Đăng nhập ngay
           </button>
         </p>

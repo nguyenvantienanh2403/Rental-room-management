@@ -2,6 +2,11 @@ import mongoose, { Schema, model } from "mongoose";
 
 const tenantSchema = new Schema(
   {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
     fullName: {
       type: String,
       required: true,

@@ -11,6 +11,14 @@ const getUserById = catchAsync(async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// POST /users/landlord — Create a landlord (Admin)
+// ---------------------------------------------------------------------------
+const createLandlord = catchAsync(async (req, res) => {
+  const data = await userService.createLandlordService(req.body);
+  res.status(StatusCodes.CREATED).json(data);
+});
+
+// ---------------------------------------------------------------------------
 // GET /users — Get all users (Admin)
 // ---------------------------------------------------------------------------
 const getAllUsers = catchAsync(async (req, res) => {
@@ -66,4 +74,4 @@ const verifyEmailChange = catchAsync(async (req, res) => {
   res.status(StatusCodes.OK).json(data);
 });
 
-export { getUserById, getAllUsers, updateProfile, changePassword, deleteUser, requestEmailChange, verifyEmailChange };
+export { getUserById, getAllUsers, updateProfile, changePassword, deleteUser, requestEmailChange, verifyEmailChange, createLandlord };

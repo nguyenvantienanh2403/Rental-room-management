@@ -22,6 +22,22 @@ const userSchema = new Schema(
       type: String,
       required: true,
     },
+    fullName: {
+      type: String,
+      trim: true,
+    },
+    phoneNumber: {
+      type: String,
+      trim: true,
+    },
+    identityCard: {
+      type: String,
+      trim: true,
+    },
+    homeTown: {
+      type: String,
+      trim: true,
+    },
     avatar: {
       type: String,
     },

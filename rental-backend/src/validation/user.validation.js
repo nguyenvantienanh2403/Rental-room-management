@@ -31,6 +31,34 @@ const register = Joi.object({
       "string.max": "Mật khẩu không được vượt quá 128 ký tự",
       "any.required": "Mật khẩu là bắt buộc",
     }),
+
+  fullName: Joi.string()
+    .required()
+    .messages({
+      "any.required": "Họ và tên là bắt buộc",
+      "string.empty": "Họ và tên không được để trống",
+    }),
+
+  phoneNumber: Joi.string()
+    .required()
+    .messages({
+      "any.required": "Số điện thoại là bắt buộc",
+      "string.empty": "Số điện thoại không được để trống",
+    }),
+
+  identityCard: Joi.string()
+    .required()
+    .messages({
+      "any.required": "CCCD/CMND là bắt buộc",
+      "string.empty": "CCCD/CMND không được để trống",
+    }),
+
+  homeTown: Joi.string()
+    .required()
+    .messages({
+      "any.required": "Quê quán là bắt buộc",
+      "string.empty": "Quê quán không được để trống",
+    }),
 });
 
 // ---------------------------------------------------------------------------

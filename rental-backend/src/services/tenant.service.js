@@ -39,7 +39,52 @@ const verifyRoomOwnership = async (roomId, currentUser) => {
 };
 
 // ---------------------------------------------------------------------------
-// CREATE TENANT
+// RENT ROOM (Marketplace Flow)
+// ---------------------------------------------------------------------------
+const rentRoomService = async (roomId, currentUser) => {
+  if (!roomId) throw new ApiError(StatusCodes.BAD_REQUEST, "Thiếu roomId");
+
+  // Check if room exists and is available
+  const room = await roomModel.findById(roomId);
+  if (!room) throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy phòng");
+  if (room.status !== "available") {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Phòng này hiện không có sẵn để thuê");
+  }
+
+  // Check capacity
+  const currentTenantsCount = await tenantModel.countDocuments({ roomId, status: "active" });
+  if (currentTenantsCount >= room.maxCapacity) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Phòng đã đạt giới hạn sức chứa tối đa");
+  }
+
+  // Create tenant profile using User's data
+  const tenantData = {
+    userId: currentUser._id,
+    fullName: currentUser.fullName || currentUser.username,
+    identityCard: currentUser.identityCard || "000000000000",
+    phoneNumber: currentUser.phoneNumber || "0000000000",
+    email: currentUser.email,
+    homeTown: currentUser.homeTown || "Chưa cập nhật",
+    roomId: roomId,
+    status: "active"
+  };
+
+  const newTenant = await tenantModel.create(tenantData);
+
+  // Update room status
+  room.status = "rented";
+  await room.save();
+
+  const tenant = await tenantModel
+    .findById(newTenant._id)
+    .populate(TENANT_POPULATE)
+    .lean();
+
+  return respone(StatusCodes.CREATED, "Thuê phòng thành công", tenant);
+};
+
+// ---------------------------------------------------------------------------
+// CREATE TENANT (Admin/Landlord Flow)
 // ---------------------------------------------------------------------------
 const createTenantService = async (tenantData, currentUser) => {
   // Quyền sở hữu: Chỉ được thêm khách vào phòng của mình
@@ -230,4 +275,5 @@ export {
   getTenantByIdService,
   updateTenantService,
   deleteTenantService,
+  rentRoomService,
 };

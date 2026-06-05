@@ -109,7 +109,7 @@ export function MainLayout() {
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden w-full" style={{ backgroundColor: '#FAFAFA' }}>
+      <div className="flex-1 flex flex-col overflow-hidden w-full">
         {/* Topbar */}
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 shrink-0 z-10 shadow-sm">
           {/* Mobile Menu Button & Logo */}
@@ -131,6 +131,13 @@ export function MainLayout() {
           </div>
 
           <div className="flex items-center gap-3 sm:gap-4 ml-auto">
+            <button 
+              onClick={() => navigate("/")}
+              className="p-2 bg-slate-50 rounded-full border border-slate-200 text-slate-600 hover:text-primary transition-colors relative"
+              title="Về trang chủ RentalMarket"
+            >
+              <Home className="w-5 h-5" />
+            </button>
             <NotificationDropdown />
             
             <div className="relative flex items-center gap-3" ref={dropdownRef}>

@@ -11,6 +11,14 @@ const createRoom = catchAsync(async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /rooms/public
+// ---------------------------------------------------------------------------
+const getPublicRooms = catchAsync(async (req, res) => {
+  const data = await roomService.getPublicRoomsService(req.query);
+  res.status(StatusCodes.OK).json(data);
+});
+
+// ---------------------------------------------------------------------------
 // GET /rooms
 // ---------------------------------------------------------------------------
 const getAllRooms = catchAsync(async (req, res) => {
@@ -50,11 +58,21 @@ const deleteRoom = catchAsync(async (req, res) => {
   res.status(StatusCodes.OK).json(data);
 });
 
+// ---------------------------------------------------------------------------
+// POST /rooms/upload-images
+// ---------------------------------------------------------------------------
+const uploadRoomImages = catchAsync(async (req, res) => {
+  const data = await roomService.uploadRoomImagesService(req.files);
+  res.status(StatusCodes.OK).json(data);
+});
+
 export {
   createRoom,
   getAllRooms,
+  getPublicRooms,
   getRoomsByBuilding,
   getRoomBySlug,
   updateRoom,
   deleteRoom,
+  uploadRoomImages,
 };

@@ -12,6 +12,12 @@ export const userService = {
     const response = await api.delete(`/users/${id}`);
     return response.data;
   },
+
+  // Tạo chủ nhà (Admin)
+  createLandlord: async (data) => {
+    const response = await api.post('/users/landlord', data);
+    return response.data;
+  },
   // Cập nhật thông tin cá nhân
   updateProfile: async (id, data) => {
     const response = await api.patch(`/users/${id}/profile`, data);

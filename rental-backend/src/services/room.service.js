@@ -95,6 +95,38 @@ const getRoomsByBuildingService = async (buildingId, queryOptions = {}, currentU
 };
 
 // ---------------------------------------------------------------------------
+// GET PUBLIC ROOMS (Marketplace)
+// ---------------------------------------------------------------------------
+const getPublicRoomsService = async (queryOptions = {}) => {
+  const { page = 1, limit = 10 } = queryOptions;
+  const filter = { status: "available" }; // Luôn luôn chỉ lấy phòng trống
+
+  const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+  const limitNum = parseInt(limit, 10);
+
+  const [rooms, totalCount] = await Promise.all([
+    roomModel
+      .find(filter)
+      .populate(ROOM_POPULATE)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .lean(),
+    roomModel.countDocuments(filter),
+  ]);
+
+  return respone(StatusCodes.OK, "Lấy danh sách phòng trống thành công", {
+    rooms,
+    pagination: {
+      page: parseInt(page, 10),
+      limit: limitNum,
+      totalCount,
+      totalPages: Math.ceil(totalCount / limitNum),
+    },
+  });
+};
+
+// ---------------------------------------------------------------------------
 // GET ALL ROOMS (Xử lý Data Ownership toàn cục)
 // ---------------------------------------------------------------------------
 const getAllRoomsService = async (queryOptions = {}, currentUser) => {
@@ -218,11 +250,40 @@ const deleteRoomService = async (roomId, currentUser) => {
   return respone(StatusCodes.OK, "Xóa phòng thành công");
 };
 
+// ---------------------------------------------------------------------------
+// UPLOAD ROOM IMAGES
+// ---------------------------------------------------------------------------
+const uploadRoomImagesService = async (files) => {
+  if (!files || files.length === 0) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Không có file ảnh được cung cấp");
+  }
+
+  const uploadPromises = files.map(file => 
+    import("./upload.service.js").then(m => m.uploadToCloudinary(
+      file.buffer,
+      "rental-app/rooms",
+      {
+        transformation: [
+          { width: 1200, height: 800, crop: "fill" },
+          { quality: "auto", fetch_format: "auto" },
+        ],
+      }
+    ))
+  );
+
+  const results = await Promise.all(uploadPromises);
+  const imageUrls = results.map(result => result.secure_url);
+
+  return respone(StatusCodes.OK, "Tải ảnh lên thành công", imageUrls);
+};
+
 export {
   createRoomService,
-  getAllRoomsService,
   getRoomsByBuildingService,
+  getAllRoomsService,
+  getPublicRoomsService,
   getRoomBySlugService,
   updateRoomService,
   deleteRoomService,
+  uploadRoomImagesService,
 };

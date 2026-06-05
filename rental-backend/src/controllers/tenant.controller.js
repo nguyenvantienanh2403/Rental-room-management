@@ -3,6 +3,14 @@ import { catchAsync } from "../utils/index.js";
 import { tenantService } from "../services/index.js";
 
 // ---------------------------------------------------------------------------
+// POST /tenants/rent
+// ---------------------------------------------------------------------------
+const rentRoom = catchAsync(async (req, res) => {
+  const data = await tenantService.rentRoomService(req.body.roomId, req.user);
+  res.status(StatusCodes.CREATED).json(data);
+});
+
+// ---------------------------------------------------------------------------
 // POST /tenants
 // ---------------------------------------------------------------------------
 const createTenant = catchAsync(async (req, res) => {
@@ -57,4 +65,5 @@ export {
   getTenantById,
   updateTenant,
   deleteTenant,
+  rentRoom,
 };

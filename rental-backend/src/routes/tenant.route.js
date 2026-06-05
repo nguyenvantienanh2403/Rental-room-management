@@ -15,6 +15,13 @@ tenantRoute.get("/room/:roomId", auth, tenantController.getTenantsByRoom);
 // GET /tenants/:id — Get tenant detail by ID (Requires Auth)
 tenantRoute.get("/:id", auth, tenantController.getTenantById);
 
+// POST /tenants/rent — User rents a room (Requires Auth)
+tenantRoute.post(
+  "/rent",
+  auth,
+  tenantController.rentRoom,
+);
+
 // POST /tenants — Create a new tenant (Requires Auth)
 tenantRoute.post(
   "/",

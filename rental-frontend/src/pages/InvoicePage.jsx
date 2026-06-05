@@ -126,23 +126,28 @@ export function InvoicePage() {
     setIsSaving(true);
     const toastId = toast.loading("Đang cập nhật hóa đơn...");
     try {
-      const payload = {
-        discount: Number(editFormData.discount),
-        status: editFormData.status,
-        otherFees: editOtherFees
-      };
-      if (editFormData.dueDate) {
-        payload.dueDate = new Date(editFormData.dueDate).toISOString();
+      if (selectedInvoice.status === 'draft') {
+        const updatePayload = {
+          discount: Number(editFormData.discount),
+          otherFees: editOtherFees
+        };
+        if (editFormData.dueDate) {
+          updatePayload.dueDate = new Date(editFormData.dueDate).toISOString();
+        }
+        await invoiceService.update(selectedInvoice._id, updatePayload);
       }
 
-      await invoiceService.update(selectedInvoice._id, payload);
+      if (editFormData.status !== selectedInvoice.status) {
+        await invoiceService.updateStatus(selectedInvoice._id, editFormData.status);
+      }
+
       toast.success("Cập nhật thành công!", { id: toastId });
       await fetchInvoices();
       setIsEditModalOpen(false);
       
       // Update selectedInvoice if view modal is open (edge case)
       if (isViewModalOpen) {
-         setSelectedInvoice({...selectedInvoice, ...payload});
+         setSelectedInvoice({...selectedInvoice, status: editFormData.status, discount: editFormData.discount});
       }
     } catch (error) {
       toast.error(error.response?.data?.message || "Lỗi cập nhật", { id: toastId });
@@ -358,11 +363,11 @@ export function InvoicePage() {
                </div>
                <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Hạn thanh toán</label>
-                  <Input type="date" value={editFormData.dueDate} onChange={e => setEditFormData({...editFormData, dueDate: e.target.value})} />
+                  <Input type="date" value={editFormData.dueDate} onChange={e => setEditFormData({...editFormData, dueDate: e.target.value})} disabled={selectedInvoice?.status !== 'draft'} />
                </div>
                <div className="col-span-2">
                   <label className="block text-sm font-medium text-slate-700 mb-1">Giảm giá (VNĐ)</label>
-                  <Input type="number" min="0" value={editFormData.discount} onChange={e => setEditFormData({...editFormData, discount: e.target.value})} />
+                  <Input type="number" min="0" value={editFormData.discount} onChange={e => setEditFormData({...editFormData, discount: e.target.value})} disabled={selectedInvoice?.status !== 'draft'} />
                </div>
             </div>
 
@@ -375,7 +380,7 @@ export function InvoicePage() {
                        <Input value={fee.name} onChange={e => handleUpdateFee(idx, 'name', e.target.value)} disabled />
                     </div>
                     <div className="w-1/2">
-                       <Input type="number" min="0" value={fee.amount} onChange={e => handleUpdateFee(idx, 'amount', e.target.value)} />
+                       <Input type="number" min="0" value={fee.amount} onChange={e => handleUpdateFee(idx, 'amount', e.target.value)} disabled={selectedInvoice?.status !== 'draft'} />
                     </div>
                   </div>
                 ))}

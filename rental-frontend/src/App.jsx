@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { LoginPage } from './pages/LoginPage';
+import { AdminLoginPage } from './pages/AdminLoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
@@ -18,7 +19,11 @@ import { ProfilePage } from './pages/ProfilePage';
 import { ChangePasswordPage } from './pages/ChangePasswordPage';
 import { UserPage } from './pages/UserPage';
 import { MainLayout } from './layout/MainLayout';
+import { TenantLayout } from './layout/TenantLayout';
+import { TenantDashboard } from './pages/tenant/TenantDashboard';
 import { ProtectedRoute } from './components/ProtectedRoute';
+
+import { HomePage } from './pages/HomePage';
 
 function App() {
   return (
@@ -26,13 +31,20 @@ function App() {
       <Toaster position="top-right" />
       <Routes>
         {/* Public Routes */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/admin/login" element={<AdminLoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
       
-      {/* Protected Routes */}
+      {/* Tenant Portal Routes */}
+      <Route path="/t" element={<TenantLayout />}>
+        <Route index element={<TenantDashboard />} />
+        <Route path="profile" element={<ProfilePage />} />
+      </Route>
+
+      {/* Admin/Landlord Routes */}
       <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/buildings" element={<BuildingPage />} />
