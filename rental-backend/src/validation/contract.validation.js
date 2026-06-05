@@ -2,6 +2,22 @@ import Joi from "joi";
 
 const objectIdMessage = "Định dạng ObjectId không hợp lệ";
 
+const contractServiceSchema = Joi.object({
+  name: Joi.string().trim().required().messages({
+    "any.required": "Tên dịch vụ là bắt buộc",
+  }),
+  price: Joi.number().min(0).required().messages({
+    "number.min": "Giá dịch vụ không được là số âm",
+    "any.required": "Giá dịch vụ là bắt buộc",
+  }),
+  unit: Joi.string().trim().required().messages({
+    "any.required": "Đơn vị tính là bắt buộc",
+  }),
+  quantity: Joi.number().min(1).default(1).messages({
+    "number.min": "Số lượng phải lớn hơn 0",
+  }),
+});
+
 const createContract = Joi.object({
 
   roomId: Joi.string()
@@ -43,6 +59,7 @@ const createContract = Joi.object({
     "number.min": "Giá nước không được là số âm",
     "any.required": "Giá nước là bắt buộc",
   }),
+  services: Joi.array().items(contractServiceSchema).default([]),
   status: Joi.string().valid("active", "expired", "terminated").default("active").messages({
     "any.only": "Trạng thái hợp đồng phải là: active, expired, terminated",
   }),
@@ -79,6 +96,7 @@ const updateContract = Joi.object({
   waterPrice: Joi.number().min(0).messages({
     "number.min": "Giá nước không được là số âm",
   }),
+  services: Joi.array().items(contractServiceSchema),
   status: Joi.string().valid("active", "expired", "terminated").messages({
     "any.only": "Trạng thái hợp đồng phải là: active, expired, terminated",
   }),

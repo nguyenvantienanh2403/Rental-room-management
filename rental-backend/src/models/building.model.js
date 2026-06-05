@@ -45,6 +45,14 @@ const buildingSchema = new mongoose.Schema(
         publicId: { type: String, required: true },
       },
     ],
+    services: [
+      {
+        name: { type: String, required: true },
+        price: { type: Number, required: true, min: 0 },
+        unit: { type: String, required: true },
+        description: { type: String, default: "" },
+      },
+    ],
     totalRooms: {
       type: Number,
       default: 0,

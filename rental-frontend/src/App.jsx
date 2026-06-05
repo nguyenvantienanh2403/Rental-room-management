@@ -10,6 +10,7 @@ import { BuildingFormPage } from './pages/BuildingFormPage';
 import { BuildingDetailPage } from './pages/BuildingDetailPage';
 import { RoomPage } from './pages/RoomPage';
 import { TenantPage } from './pages/TenantPage';
+import { ContractPage } from './pages/ContractPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { ChangePasswordPage } from './pages/ChangePasswordPage';
@@ -38,6 +39,7 @@ function App() {
         <Route path="/buildings/:id/edit" element={<BuildingFormPage />} />
         <Route path="/rooms" element={<RoomPage />} />
         <Route path="/tenants" element={<TenantPage />} />
+        <Route path="/contracts" element={<ContractPage />} />
         <Route path="/users" element={<UserPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/change-password" element={<ChangePasswordPage />} />

@@ -46,6 +46,14 @@ const contractSchema = new Schema(
       required: true,
       min: 0,
     },
+    services: [
+      {
+        name: { type: String, required: true },
+        price: { type: Number, required: true, min: 0 },
+        unit: { type: String, required: true },
+        quantity: { type: Number, default: 1, min: 1 },
+      },
+    ],
     status: {
       type: String,
       enum: ["active", "expired", "terminated"],

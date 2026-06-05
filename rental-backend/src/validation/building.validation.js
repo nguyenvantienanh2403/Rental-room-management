@@ -47,6 +47,23 @@ const imageSchema = Joi.object({
 });
 
 // ---------------------------------------------------------------------------
+// SERVICE SUB-SCHEMA
+// ---------------------------------------------------------------------------
+const serviceSchema = Joi.object({
+  name: Joi.string().trim().required().messages({
+    "any.required": "Tên dịch vụ là bắt buộc",
+  }),
+  price: Joi.number().min(0).required().messages({
+    "number.min": "Giá dịch vụ không được là số âm",
+    "any.required": "Giá dịch vụ là bắt buộc",
+  }),
+  unit: Joi.string().trim().required().messages({
+    "any.required": "Đơn vị tính là bắt buộc",
+  }),
+  description: Joi.string().trim().allow("").default(""),
+});
+
+// ---------------------------------------------------------------------------
 // CREATE BUILDING
 // ---------------------------------------------------------------------------
 const createBuilding = Joi.object({
@@ -88,6 +105,10 @@ const createBuilding = Joi.object({
 
   images: Joi.array()
     .items(imageSchema)
+    .default([]),
+
+  services: Joi.array()
+    .items(serviceSchema)
     .default([]),
 
   totalRooms: Joi.number()
@@ -142,6 +163,9 @@ const updateBuilding = Joi.object({
 
   images: Joi.array()
     .items(imageSchema),
+
+  services: Joi.array()
+    .items(serviceSchema),
 
   totalRooms: Joi.number()
     .integer()

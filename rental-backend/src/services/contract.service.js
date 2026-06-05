@@ -211,6 +211,7 @@ const updateContractService = async (contractId, updateData) => {
     "monthlyPrice",
     "electricityPrice",
     "waterPrice",
+    "services",
     "status",
   ];
   const sanitizedData = {};

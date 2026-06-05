@@ -173,6 +173,7 @@ const updateBuildingService = async (currentUser, buildingId, updateData) => {
     "address",
     "amenities",
     "images",
+    "services",
     "totalRooms",
     "contactPhone",
   ];

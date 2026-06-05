@@ -125,12 +125,27 @@ const createInvoiceService = async (invoiceData) => {
       waterTotal = contract.waterPrice * numberOfTenants;
     }
 
+    // Tính tiền dịch vụ từ hợp đồng và gộp vào otherFees
+    let finalOtherFees = [...otherFees];
+    if (contract.services && contract.services.length > 0) {
+      contract.services.forEach(service => {
+        // Chỉ thêm vào nếu người dùng không tự ghi đè tên dịch vụ đó trong otherFees
+        const existingOverride = finalOtherFees.find(f => f.name === service.name);
+        if (!existingOverride) {
+          finalOtherFees.push({
+            name: service.name,
+            amount: service.price * (service.quantity || 1)
+          });
+        }
+      });
+    }
+
     // B5: Tính tổng tiền
     const totalAmount = calculateTotals(
       contract.monthlyPrice,
       electricityTotal,
       waterTotal,
-      otherFees,
+      finalOtherFees,
       discount,
     );
 
@@ -153,7 +168,7 @@ const createInvoiceService = async (invoiceData) => {
       waterUnitPrice: contract.waterPrice,
       electricityTotal,
       waterTotal,
-      otherFees,
+      otherFees: finalOtherFees,
       discount,
       totalAmount,
       dueDate: finalDueDate,

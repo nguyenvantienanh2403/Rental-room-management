@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import { LogOut, Home, Users, Building, FileText, Bell, User as UserIcon, Key, UserCog, Menu, X } from "lucide-react";
+import { LogOut, Home, Users, Building, FileText, Bell, User as UserIcon, Key, UserCog, Menu, X, DoorOpen } from "lucide-react";
 import { authService } from "../services/auth.service";
 
 export function MainLayout() {
@@ -47,8 +47,9 @@ export function MainLayout() {
     { name: "Tổng quan", icon: Home, path: "/dashboard" },
     { name: "Quản lý người dùng", icon: UserCog, path: "/users", adminOnly: true },
     { name: "Quản lý tòa nhà", icon: Building, path: "/buildings" },
-    { name: "Quản lý phòng", icon: Home, path: "/rooms" },
+    { name: "Quản lý phòng", icon: DoorOpen, path: "/rooms" },
     { name: "Khách thuê", icon: Users, path: "/tenants" },
+    { name: "Hợp đồng", icon: FileText, path: "/contracts" },
     { name: "Hóa đơn", icon: FileText, path: "/invoices" },
   ];
 
