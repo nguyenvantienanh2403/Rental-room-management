@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import { LogOut, Home, Users, Building, FileText, Bell, User as UserIcon, Key, UserCog, Menu, X, DoorOpen } from "lucide-react";
+import { LogOut, Home, Users, Building, Building2, FileText, Bell, User as UserIcon, Key, UserCog, Menu, X, DoorOpen, Zap, Settings } from "lucide-react";
 import { authService } from "../services/auth.service";
+import { NotificationDropdown } from "../components/NotificationDropdown";
 
 export function MainLayout() {
   const navigate = useNavigate();
@@ -45,12 +46,13 @@ export function MainLayout() {
 
   const navItems = [
     { name: "Tổng quan", icon: Home, path: "/dashboard" },
-    { name: "Quản lý người dùng", icon: UserCog, path: "/users", adminOnly: true },
-    { name: "Quản lý tòa nhà", icon: Building, path: "/buildings" },
-    { name: "Quản lý phòng", icon: DoorOpen, path: "/rooms" },
+    { name: "Tòa nhà", icon: Building2, path: "/buildings" },
+    { name: "Phòng", icon: DoorOpen, path: "/rooms" },
     { name: "Khách thuê", icon: Users, path: "/tenants" },
     { name: "Hợp đồng", icon: FileText, path: "/contracts" },
+    { name: "Điện nước", icon: Zap, path: "/meter-readings" },
     { name: "Hóa đơn", icon: FileText, path: "/invoices" },
+    { name: "Tài khoản", icon: Settings, path: "/users", adminOnly: true },
   ];
 
   const isAdmin = user?.role?.name?.toLowerCase() === 'admin';
@@ -129,9 +131,7 @@ export function MainLayout() {
           </div>
 
           <div className="flex items-center gap-3 sm:gap-4 ml-auto">
-            <button className="p-2 text-slate-600 hover:text-secondary hover:bg-slate-50 rounded-full transition-colors">
-              <Bell className="h-5 w-5" />
-            </button>
+            <NotificationDropdown />
             
             <div className="relative flex items-center gap-3" ref={dropdownRef}>
               <div className="hidden sm:block text-right">

@@ -75,7 +75,7 @@ export const InvoicePrintTemplate = React.forwardRef(({ invoice }, ref) => {
                 <td style={{ border: '1px solid #cbd5e1', padding: '10px' }}>Điện</td>
                 <td style={{ border: '1px solid #cbd5e1', padding: '10px', textAlign: 'right' }}>{formatMoney(invoice.electricityUnitPrice)}</td>
                 <td style={{ border: '1px solid #cbd5e1', padding: '10px', textAlign: 'center' }}>
-                  {invoice.meterReadingId?.electricity?.newIndex - invoice.meterReadingId?.electricity?.oldIndex || 0}
+                  {parseFloat(((invoice.meterReadingId?.electricity?.newIndex || 0) - (invoice.meterReadingId?.electricity?.oldIndex || 0)).toFixed(2))} kwh
                 </td>
                 <td style={{ border: '1px solid #cbd5e1', padding: '10px', textAlign: 'right', fontWeight: 'bold' }}>{formatMoney(invoice.electricityTotal)}</td>
               </tr>
@@ -85,7 +85,7 @@ export const InvoicePrintTemplate = React.forwardRef(({ invoice }, ref) => {
                 <td style={{ border: '1px solid #cbd5e1', padding: '10px' }}>Nước</td>
                 <td style={{ border: '1px solid #cbd5e1', padding: '10px', textAlign: 'right' }}>{formatMoney(invoice.waterUnitPrice)}</td>
                 <td style={{ border: '1px solid #cbd5e1', padding: '10px', textAlign: 'center' }}>
-                  {invoice.meterReadingId?.water?.newIndex - invoice.meterReadingId?.water?.oldIndex || 0}
+                  {parseFloat(((invoice.meterReadingId?.water?.newIndex || 0) - (invoice.meterReadingId?.water?.oldIndex || 0)).toFixed(2))} m³
                 </td>
                 <td style={{ border: '1px solid #cbd5e1', padding: '10px', textAlign: 'right', fontWeight: 'bold' }}>{formatMoney(invoice.waterTotal)}</td>
               </tr>

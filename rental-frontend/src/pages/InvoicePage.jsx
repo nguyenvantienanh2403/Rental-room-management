@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Search, Loader2, Filter, Printer, Copy, AlertCircle, Save, X } from "lucide-react";
 import { invoiceService } from "../services/invoice.service";
 import { contractService } from "../services/contract.service";
+import { buildingService } from "../services/building.service";
 import { InvoiceTable } from "../features/invoice/InvoiceTable";
 import { InvoicePrintTemplate } from "../features/invoice/InvoicePrintTemplate";
 import { Modal } from "../components/ui/Modal";
@@ -13,6 +14,7 @@ import { toPng } from 'html-to-image';
 export function InvoicePage() {
   const [invoices, setInvoices] = useState([]);
   const [contracts, setContracts] = useState([]);
+  const [buildings, setBuildings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   
   const [searchTerm, setSearchTerm] = useState("");
@@ -51,16 +53,26 @@ export function InvoicePage() {
       if (selectedStatusFilter !== "all") params.status = selectedStatusFilter;
       if (selectedMonthFilter !== "all") params.month = selectedMonthFilter;
       
-      const [invoiceRes, contractRes] = await Promise.all([
+      const [invoiceRes, contractRes, buildingRes] = await Promise.all([
         invoiceService.getAll(params),
-        contractService.getAll({ status: 'active' }) // Only active contracts for new invoices
+        contractService.getAll({ status: 'active' }),
+        buildingService.getAll()
       ]);
       
       let list = Array.isArray(invoiceRes) ? invoiceRes : (invoiceRes?.data?.invoices || invoiceRes?.data || []);
       setInvoices(list);
       
       let contractList = Array.isArray(contractRes) ? contractRes : (contractRes?.data?.contracts || contractRes?.data || []);
-      setContracts(contractList);
+      let buildingList = Array.isArray(buildingRes) ? buildingRes : (buildingRes?.data?.buildings || buildingRes?.data || []);
+      
+      setBuildings(buildingList);
+      
+      const enhancedContracts = contractList.map(c => {
+        const bId = c.roomId?.buildingId?._id || c.roomId?.buildingId;
+        const b = buildingList.find(b => b._id === bId);
+        return { ...c, buildingName: b?.name || 'Tòa nhà' };
+      });
+      setContracts(enhancedContracts);
     } catch (error) {
       toast.error("Không thể tải danh sách hóa đơn");
     } finally {
@@ -383,7 +395,7 @@ export function InvoicePage() {
                 >
                   <option value="" disabled>-- Chọn hợp đồng đang hiệu lực --</option>
                   {contracts.map(c => (
-                    <option key={c._id} value={c._id}>{c.contractCode} - Khách: {c.tenantId?.fullName} (Phòng: {c.roomId?.name})</option>
+                    <option key={c._id} value={c._id}>[{c.buildingName}] {c.contractCode} - Khách: {c.tenantId?.fullName} (Phòng: {c.roomId?.name})</option>
                   ))}
                 </select>
              </div>
@@ -403,20 +415,20 @@ export function InvoicePage() {
 
              <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Số Điện cũ</label>
-                <Input type="number" min="0" value={createFormData.electricityOldIndex} onChange={e => setCreateFormData({...createFormData, electricityOldIndex: e.target.value})} placeholder="VD: 1000" />
+                <Input type="number" step="any" min="0" value={createFormData.electricityOldIndex} onChange={e => setCreateFormData({...createFormData, electricityOldIndex: e.target.value})} placeholder="VD: 1000" />
              </div>
              <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Số Điện mới</label>
-                <Input type="number" min="0" value={createFormData.electricityNewIndex} onChange={e => setCreateFormData({...createFormData, electricityNewIndex: e.target.value})} placeholder="VD: 1090" />
+                <Input type="number" step="any" min="0" value={createFormData.electricityNewIndex} onChange={e => setCreateFormData({...createFormData, electricityNewIndex: e.target.value})} placeholder="VD: 1090" />
              </div>
              
              <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Số Nước cũ</label>
-                <Input type="number" min="0" value={createFormData.waterOldIndex} onChange={e => setCreateFormData({...createFormData, waterOldIndex: e.target.value})} placeholder="VD: 100" />
+                <Input type="number" step="any" min="0" value={createFormData.waterOldIndex} onChange={e => setCreateFormData({...createFormData, waterOldIndex: e.target.value})} placeholder="VD: 100" />
              </div>
              <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Số Nước mới</label>
-                <Input type="number" min="0" value={createFormData.waterNewIndex} onChange={e => setCreateFormData({...createFormData, waterNewIndex: e.target.value})} placeholder="VD: 102" />
+                <Input type="number" step="any" min="0" value={createFormData.waterNewIndex} onChange={e => setCreateFormData({...createFormData, waterNewIndex: e.target.value})} placeholder="VD: 102" />
              </div>
 
              <div className="col-span-2">
