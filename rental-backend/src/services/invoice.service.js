@@ -28,7 +28,7 @@ const INVOICE_POPULATE = [
       },
       {
         path: "tenantId",
-        select: "fullName phoneNumber",
+        select: "fullName phoneNumber userId",
       },
     ],
   },
@@ -191,25 +191,34 @@ const createInvoiceService = async (invoiceData) => {
       .lean();
 
     // Bắn thông báo NEW_INVOICE
-    const landlordId =
-      populatedInvoice.contractId?.roomId?.buildingId?.landlordId;
+    const landlordId = populatedInvoice.contractId?.roomId?.buildingId?.landlordId;
     const roomName = populatedInvoice.contractId?.roomId?.name;
+    const tenantUserId = populatedInvoice.contractId?.tenantId?.userId;
+    
+    const notificationsToCreate = [];
+
     if (landlordId) {
-      await notificationModel.create(
-        [
-          {
-            recipientId: landlordId,
-            title: "Hóa đơn mới",
-            message: `Hóa đơn tháng ${month}/${year} của ${roomName || "phòng"} đã được tạo thành công.`,
-            type: "NEW_INVOICE",
-            metadata: {
-              invoiceId: newInvoice._id,
-              contractId: contractId,
-            },
-          },
-        ],
-        { session },
-      );
+      notificationsToCreate.push({
+        recipientId: landlordId,
+        title: "Hóa đơn mới",
+        message: `Hóa đơn tháng ${month}/${year} của ${roomName || "phòng"} đã được tạo thành công.`,
+        type: "NEW_INVOICE",
+        metadata: { invoiceId: newInvoice._id, contractId: contractId },
+      });
+    }
+
+    if (tenantUserId) {
+      notificationsToCreate.push({
+        recipientId: tenantUserId,
+        title: "Thông báo hạn đóng tiền",
+        message: `Hóa đơn tháng ${month}/${year} của phòng ${roomName || ""} đã được tạo. Vui lòng thanh toán trước hạn.`,
+        type: "NEW_INVOICE",
+        metadata: { invoiceId: newInvoice._id, contractId: contractId },
+      });
+    }
+
+    if (notificationsToCreate.length > 0) {
+      await notificationModel.create(notificationsToCreate, { session });
     }
 
     await session.commitTransaction();
@@ -332,20 +341,34 @@ const updateInvoiceStatusService = async (invoiceId, newStatus) => {
 
   // Bắn thông báo INVOICE_PAID nếu trạng thái là paid
   if (newStatus === "paid") {
-    const landlordId =
-      updatedInvoice.contractId?.roomId?.buildingId?.landlordId;
+    const landlordId = updatedInvoice.contractId?.roomId?.buildingId?.landlordId;
     const roomName = updatedInvoice.contractId?.roomId?.name;
+    const tenantUserId = updatedInvoice.contractId?.tenantId?.userId;
+    
+    const notificationsToCreate = [];
+
     if (landlordId) {
-      await notificationModel.create({
+      notificationsToCreate.push({
         recipientId: landlordId,
         title: "Đã thanh toán hóa đơn",
         message: `Hóa đơn tháng ${updatedInvoice.month}/${updatedInvoice.year} của ${roomName || "phòng"} đã được thanh toán.`,
         type: "INVOICE_PAID",
-        metadata: {
-          invoiceId: invoiceId,
-          contractId: updatedInvoice.contractId?._id,
-        },
+        metadata: { invoiceId: invoiceId, contractId: updatedInvoice.contractId?._id },
       });
+    }
+
+    if (tenantUserId) {
+      notificationsToCreate.push({
+        recipientId: tenantUserId,
+        title: "Thanh toán thành công",
+        message: `Cảm ơn bạn! Hóa đơn tháng ${updatedInvoice.month}/${updatedInvoice.year} của phòng ${roomName || ""} đã được thanh toán thành công.`,
+        type: "INVOICE_PAID",
+        metadata: { invoiceId: invoiceId, contractId: updatedInvoice.contractId?._id },
+      });
+    }
+
+    if (notificationsToCreate.length > 0) {
+      await notificationModel.create(notificationsToCreate);
     }
   }
 

@@ -7,6 +7,14 @@
   --color-tertiary: #FFD700; /* Vàng chanh (Gold) */
   --color-neutral: #FFFFFF; /* Trắng sứ */
   --color-neutral-foreground: #301934; /* Tím thẫm */
+  
+  /* Tenant Portal Theme */
+  --color-tenant-primary: #301934;
+  --color-tenant-primary-hover: #4a2654;
+  --color-tenant-accent: #ffb3c6;
+  --color-tenant-accent-dark: #e8a0b3;
+  --color-tenant-success: #10b981;
+  --color-tenant-warning: #f59e0b;
 }
 
 @layer base {

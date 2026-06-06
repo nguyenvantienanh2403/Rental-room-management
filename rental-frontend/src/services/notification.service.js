@@ -1,7 +1,7 @@
 import { api } from "./api";
 
 export const notificationService = {
-  getAll: async (params = { page: 1, limit: 20 }) => {
+  getAll: async (params = {}) => {
     const response = await api.get("/notifications", { params });
     return response.data;
   },
@@ -19,5 +19,5 @@ export const notificationService = {
   markAllAsRead: async () => {
     const response = await api.patch("/notifications/read-all");
     return response.data;
-  }
+  },
 };

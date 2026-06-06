@@ -44,6 +44,11 @@ const verifyRoomOwnership = async (roomId, currentUser) => {
 const rentRoomService = async (roomId, currentUser) => {
   if (!roomId) throw new ApiError(StatusCodes.BAD_REQUEST, "Thiếu roomId");
 
+  const roleName = typeof currentUser.role === 'object' ? currentUser.role?.name : currentUser.role;
+  if (roleName && roleName.toLowerCase() !== "user") {
+    throw new ApiError(StatusCodes.FORBIDDEN, "Tài khoản quản trị hoặc chủ trọ không thể thuê phòng trực tuyến");
+  }
+
   // Check if room exists and is available
   const room = await roomModel.findById(roomId);
   if (!room) throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy phòng");

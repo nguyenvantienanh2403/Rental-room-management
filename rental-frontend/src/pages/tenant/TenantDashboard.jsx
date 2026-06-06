@@ -1,52 +1,60 @@
-import { useState, useEffect } from "react";
-import { BillCard } from "../../features/tenant/components/BillCard";
-import { UsageChart } from "../../features/tenant/components/UsageChart";
-import { Bell, UserCircle2, ShieldCheck, HelpCircle, LogOut, User as UserIcon, Home as HomeIcon } from "lucide-react";
-import { authService } from "../../services/auth.service";
-import { invoiceService } from "../../services/invoice.service";
-import { meterReadingService } from "../../services/meterReading.service";
-import { useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { HelpCircle, UserCircle2, Bell, ShieldCheck, ChevronRight, FileText, Activity, Wallet, Receipt } from 'lucide-react';
+import { authService } from '../../services/auth.service';
+import { invoiceService } from '../../services/invoice.service';
+import { meterReadingService } from '../../services/meterReading.service';
+import toast from 'react-hot-toast';
+
+import { BillCard } from '../../features/tenant/components/BillCard';
+import { UsageChart } from '../../features/tenant/components/UsageChart';
+import { NotificationDropdown } from '../../features/tenant/components/NotificationDropdown';
+import { notificationService } from '../../services/notification.service';
+import { formatMoney } from '../../utils/format';
 
 export function TenantDashboard() {
-  const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [invoice, setInvoice] = useState(null);
   const [chartData, setChartData] = useState([]);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [greeting, setGreeting] = useState('Chào bạn');
+  
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  
+  const navigate = useNavigate();
 
   useEffect(() => {
+    // Set greeting based on time
+    const hour = new Date().getHours();
+    if (hour < 12) setGreeting('Chào buổi sáng');
+    else if (hour < 18) setGreeting('Chào buổi chiều');
+    else setGreeting('Chào buổi tối');
+
     const fetchDashboardData = async () => {
       try {
         setIsLoading(true);
-        
-        // Fetch user profile
-        const userRes = await authService.getMe();
-        const userData = userRes?.data || userRes;
-        setUser(userData);
+        // 1. Get user profile
+        const userData = await authService.getMe();
+        setUser(userData.data || userData);
 
-        // Fetch unpaid invoice and usage history concurrently
-        // Assuming the backend filters data based on the logged-in user's token
-        const [invoicesRes, meterRes] = await Promise.all([
-          invoiceService.getAll({ status: 'issued' }),
-          meterReadingService.getAll()
-        ]);
-
-        const invoiceList = Array.isArray(invoicesRes) ? invoicesRes : (invoicesRes?.data?.invoices || invoicesRes?.data || []);
-        const meterList = Array.isArray(meterRes) ? meterRes : (meterRes?.data?.readings || meterRes?.data || []);
-
-        // Sort invoices by dueDate ascending, pick the most urgent unpaid one
-        if (invoiceList.length > 0) {
-          invoiceList.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
-          setInvoice(invoiceList[0]);
+        // 2. Get unpaid invoices
+        const invRes = await invoiceService.getAll({ status: 'issued' });
+        const unpaid = invRes.data?.invoices || invRes.data || [];
+        if (unpaid.length > 0) {
+          // Sort by due date, pick the closest one
+          const closest = unpaid.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))[0];
+          setInvoice(closest);
         }
 
-        // Process meter readings for chart (last 6 months)
-        if (meterList.length > 0) {
-          // Sort by year desc, month desc
+        // 3. Get meter readings for chart
+        const meterRes = await meterReadingService.getAll();
+        const meterList = meterRes.data?.readings || meterRes.data?.data || meterRes.data || [];
+        
+        if (Array.isArray(meterList) && meterList.length > 0) {
+          // Sort by year, month descending
           meterList.sort((a, b) => {
-            if (a.year !== b.year) return b.year - a.year;
+            if (b.year !== a.year) return b.year - a.year;
             return b.month - a.month;
           });
 
@@ -60,8 +68,16 @@ export function TenantDashboard() {
           setChartData(formattedChart);
         }
 
+        // 4. Get unread notifications count
+        try {
+          const unreadRes = await notificationService.getUnreadCount();
+          setUnreadCount(unreadRes.data?.count || unreadRes.data || 0);
+        } catch (e) {
+          console.error("Failed to load notifications count", e);
+        }
+
       } catch (error) {
-        toast.error("Không thể tải dữ liệu. Vui lòng thử lại sau.");
+        toast.error("Không thể tải dữ liệu bảng điều khiển.");
         console.error(error);
       } finally {
         setIsLoading(false);
@@ -75,130 +91,154 @@ export function TenantDashboard() {
     navigate('/t/invoices');
   };
 
-  const handleLogout = () => {
-    authService.logout();
-    navigate('/login');
-  };
-
   if (isLoading) {
     return (
-      <div className="p-6 space-y-6 animate-pulse w-full max-w-md mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div className="h-10 w-40 bg-slate-200 rounded-lg"></div>
-          <div className="h-10 w-10 bg-slate-200 rounded-full"></div>
+      <div className="w-full space-y-6 animate-pulse">
+        <div className="h-40 bg-white/40 rounded-3xl"></div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="h-24 bg-white/40 rounded-2xl"></div>
+          <div className="h-24 bg-white/40 rounded-2xl"></div>
+          <div className="h-24 bg-white/40 rounded-2xl hidden md:block"></div>
         </div>
-        <div className="h-48 bg-slate-200 rounded-2xl"></div>
-        <div className="h-64 bg-slate-200 rounded-2xl"></div>
+        <div className="grid md:grid-cols-12 gap-6">
+          <div className="md:col-span-5 h-80 bg-white/40 rounded-3xl"></div>
+          <div className="md:col-span-7 h-80 bg-white/40 rounded-3xl"></div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="pb-24 pt-6 px-4 sm:px-6 w-full max-w-md mx-auto md:max-w-none md:grid md:grid-cols-12 md:gap-8">
-      {/* Header section (Mobile full width, Desktop span full) */}
-      <div className="flex justify-between items-center mb-6 md:col-span-12">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold text-slate-800">Xin chào, {user?.fullName || user?.username || "Khách"} 👋</h1>
-          <p className="text-sm text-slate-500 flex items-center gap-1 mt-0.5">
-            <ShieldCheck className="w-4 h-4 text-green-500" />
-            Khách thuê
-          </p>
+    <div className="w-full space-y-6 md:space-y-8 animate-in fade-in duration-500">
+      {/* 1. Welcome Banner */}
+      <div className="relative bg-gradient-to-br from-white to-slate-50/50 rounded-[2.5rem] p-6 md:p-10 shadow-2xl shadow-[var(--color-tenant-primary)]/5 border border-white mb-6 md:mb-8 flex flex-col md:flex-row justify-between md:items-center gap-6">
+        
+        {/* Abstract shapes */}
+        <div className="absolute -top-20 -right-20 w-64 h-64 bg-gradient-to-br from-[var(--color-tenant-accent)] to-rose-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-[var(--color-tenant-primary)]/10 to-transparent rounded-full blur-3xl -z-10 -ml-10 -mb-10"></div>
+        
+        <div className="flex items-center gap-5 z-10 w-full md:w-auto">
+          <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-[var(--color-tenant-primary)] to-[#5a2d6a] p-1 shadow-lg shadow-[var(--color-tenant-primary)]/20 flex-shrink-0">
+            <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden border-2 border-white">
+              {user?.avatar ? (
+                <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <UserCircle2 className="w-10 h-10 text-[var(--color-tenant-primary)]/20" />
+              )}
+            </div>
+          </div>
+          <div>
+            <p className="text-[var(--color-tenant-primary)]/60 font-bold text-sm md:text-base uppercase tracking-widest">{greeting},</p>
+            <h1 className="text-2xl md:text-3xl font-black text-[var(--color-tenant-primary)] tracking-tight leading-tight">
+              {user?.fullName || user?.username || 'Khách hàng'}
+            </h1>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-[var(--color-tenant-accent)]/30 text-[var(--color-tenant-primary)] text-xs font-bold">
+                <ShieldCheck className="w-3.5 h-3.5" /> Khách thuê
+              </span>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-3 relative">
+
+        <div className="flex gap-3 self-end md:self-center z-10 relative">
           <button 
-            onClick={() => navigate("/")}
-            className="p-2 bg-white rounded-full shadow-sm border border-slate-100 text-slate-600 hover:text-primary transition-colors relative"
-            title="Về trang chủ RentalMarket"
+            onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+            className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center text-[var(--color-tenant-primary)] hover:bg-slate-50 transition-colors relative"
           >
-            <HomeIcon className="w-5 h-5" />
-          </button>
-          <button className="p-2 bg-white rounded-full shadow-sm border border-slate-100 text-slate-600 hover:text-primary transition-colors relative">
             <Bell className="w-5 h-5" />
-            <span className="absolute top-1.5 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-          </button>
-          
-          <button 
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="flex items-center focus:outline-none hover:ring-2 hover:ring-primary/50 hover:ring-offset-2 rounded-full transition-all"
-          >
-            {user?.avatar ? (
-              <img src={user.avatar} alt="Avatar" className="h-10 w-10 rounded-full object-cover border-2 border-white shadow-sm" />
-            ) : (
-              <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold shadow-sm border-2 border-white">
-                {user?.fullName ? user.fullName.substring(0, 2).toUpperCase() : 'KT'}
-              </div>
+            {unreadCount > 0 && (
+              <span className="absolute top-2.5 right-2.5 w-3 h-3 bg-red-500 border-2 border-white rounded-full animate-pulse"></span>
             )}
           </button>
-
-          {isDropdownOpen && (
-            <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50 transform origin-top-right transition-all">
-              <div className="px-4 py-3 border-b border-slate-50">
-                <p className="text-sm font-bold text-slate-900">{user?.fullName || "Khách Thuê"}</p>
-                <p className="text-xs text-slate-500 truncate mt-0.5">{user?.email || "Chưa có email"}</p>
-              </div>
-              <div className="py-1">
-                <button
-                  onClick={() => { setIsDropdownOpen(false); navigate("/t/profile"); }}
-                  className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-primary/5 hover:text-primary font-medium flex items-center gap-3 transition-colors"
-                >
-                  <UserIcon className="h-4 w-4 text-slate-400" /> Hồ sơ cá nhân
-                </button>
-                <button
-                  onClick={() => { setIsDropdownOpen(false); navigate("/"); }}
-                  className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-primary/5 hover:text-primary font-medium flex items-center gap-3 transition-colors"
-                >
-                  <HomeIcon className="h-4 w-4 text-slate-400" /> Trang chủ RentalMarket
-                </button>
-              </div>
-              <div className="py-1 border-t border-slate-50">
-                <button
-                  onClick={handleLogout}
-                  className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 font-medium flex items-center gap-3 transition-colors"
-                >
-                  <LogOut className="h-4 w-4 text-red-400" /> Đăng xuất
-                </button>
-              </div>
-            </div>
-          )}
+          <NotificationDropdown isOpen={isNotificationOpen} onClose={() => { setIsNotificationOpen(false); setUnreadCount(0); }} />
         </div>
       </div>
 
-      <div className="space-y-6 md:space-y-0 md:col-span-12 md:grid md:grid-cols-2 md:gap-6 lg:grid-cols-3">
-        {/* Unpaid Bill Card */}
-        <section className="lg:col-span-1">
-          <div className="flex justify-between items-end mb-3 px-1">
-            <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Hóa đơn nợ</h2>
+      {/* 2. Stats Row */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-5">
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-5 border border-white shadow-xl shadow-[var(--color-tenant-primary)]/5 flex items-center gap-4 group hover:-translate-y-1 transition-transform duration-300">
+          <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+            <Wallet className="w-6 h-6" />
           </div>
+          <div>
+            <p className="text-xs font-bold text-[var(--color-tenant-primary)]/50 uppercase tracking-wider mb-0.5">Công nợ</p>
+            <p className="text-lg font-black text-[var(--color-tenant-primary)] leading-none">{invoice ? formatMoney(invoice.totalAmount).replace('₫', '') : '0'}<span className="text-sm">₫</span></p>
+          </div>
+        </div>
+        
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-5 border border-white shadow-xl shadow-[var(--color-tenant-primary)]/5 flex items-center gap-4 group hover:-translate-y-1 transition-transform duration-300">
+          <div className="w-12 h-12 rounded-2xl bg-[var(--color-tenant-primary)]/5 text-[var(--color-tenant-primary)] flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+            <Activity className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-[var(--color-tenant-primary)]/50 uppercase tracking-wider mb-0.5">Trạng thái</p>
+            <p className="text-sm font-black text-emerald-600 leading-none">Đang thuê</p>
+          </div>
+        </div>
+
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-5 border border-white shadow-xl shadow-[var(--color-tenant-primary)]/5 flex items-center gap-4 group hover:-translate-y-1 transition-transform duration-300 col-span-2 md:col-span-1">
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+            <Receipt className="w-6 h-6" />
+          </div>
+          <div className="flex-1 flex justify-between items-center">
+            <div>
+              <p className="text-xs font-bold text-[var(--color-tenant-primary)]/50 uppercase tracking-wider mb-0.5">Hóa đơn</p>
+              <p className="text-sm font-black text-[var(--color-tenant-primary)] leading-none">{invoice ? 'Cần thanh toán' : 'Đã thanh toán'}</p>
+            </div>
+            <Link to="/t/invoices" className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-[var(--color-tenant-primary)]/50 hover:bg-[var(--color-tenant-primary)] hover:text-white transition-colors">
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Main Content Grid */}
+      <div className="grid md:grid-cols-12 gap-6 md:gap-8">
+        
+        {/* Unpaid Bill Section */}
+        <section className="md:col-span-5 h-full">
           <BillCard invoice={invoice} onPayClick={handlePayClick} />
         </section>
 
-        {/* Usage Chart */}
-        <section className="lg:col-span-1">
-          <div className="flex justify-between items-end mb-3 px-1">
-            <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Thống kê tiêu thụ</h2>
-          </div>
+        {/* Usage Chart Section */}
+        <section className="md:col-span-7 h-full">
           <UsageChart data={chartData} />
         </section>
-
-        {/* Quick Actions */}
-        <section className="lg:col-span-1">
-          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3 px-1">Tiện ích nhanh</h2>
-          <div className="grid grid-cols-2 gap-3 md:gap-4 h-[calc(100%-2rem)]">
-            <button className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center gap-2 hover:bg-slate-50 transition-colors h-full min-h-[120px]">
-              <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
-                <HelpCircle className="w-5 h-5" />
-              </div>
-              <span className="text-sm font-medium text-slate-700">Gửi hỗ trợ</span>
-            </button>
-            <button className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center gap-2 hover:bg-slate-50 transition-colors h-full min-h-[120px]">
-              <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                <UserCircle2 className="w-5 h-5" />
-              </div>
-              <span className="text-sm font-medium text-slate-700">Giấy tờ số</span>
-            </button>
-          </div>
-        </section>
       </div>
+
+      {/* 4. Quick Actions */}
+      <section>
+        <h2 className="text-sm font-black text-[var(--color-tenant-primary)] uppercase tracking-wider mb-4 px-2">Tiện ích nhanh</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          <Link to="/t/invoices" className="bg-white/80 backdrop-blur-xl p-5 rounded-3xl shadow-lg shadow-[var(--color-tenant-primary)]/5 border border-white flex flex-col items-center justify-center gap-3 hover:-translate-y-1 hover:shadow-xl transition-all duration-300 group">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all">
+              <Receipt className="w-5 h-5" />
+            </div>
+            <span className="text-sm font-bold text-[var(--color-tenant-primary)]">Hóa đơn</span>
+          </Link>
+          
+          <Link to="/t/profile" className="bg-white/80 backdrop-blur-xl p-5 rounded-3xl shadow-lg shadow-[var(--color-tenant-primary)]/5 border border-white flex flex-col items-center justify-center gap-3 hover:-translate-y-1 hover:shadow-xl transition-all duration-300 group">
+            <div className="w-12 h-12 rounded-2xl bg-[var(--color-tenant-accent)]/30 text-[var(--color-tenant-primary)] flex items-center justify-center group-hover:scale-110 group-hover:bg-[var(--color-tenant-primary)] group-hover:text-white transition-all">
+              <UserCircle2 className="w-5 h-5" />
+            </div>
+            <span className="text-sm font-bold text-[var(--color-tenant-primary)]">Hồ sơ cá nhân</span>
+          </Link>
+
+          <Link to="/t/contracts" className="bg-white/80 backdrop-blur-xl p-5 rounded-3xl shadow-lg shadow-[var(--color-tenant-primary)]/5 border border-white flex flex-col items-center justify-center gap-3 hover:-translate-y-1 hover:shadow-xl transition-all duration-300 group">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white transition-all">
+              <FileText className="w-5 h-5" />
+            </div>
+            <span className="text-sm font-bold text-[var(--color-tenant-primary)]">Hợp đồng</span>
+          </Link>
+
+          <button onClick={() => toast("Tính năng hỗ trợ đang phát triển")} className="bg-white/80 backdrop-blur-xl p-5 rounded-3xl shadow-lg shadow-[var(--color-tenant-primary)]/5 border border-white flex flex-col items-center justify-center gap-3 hover:-translate-y-1 hover:shadow-xl transition-all duration-300 group">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-110 transition-all">
+              <HelpCircle className="w-5 h-5" />
+            </div>
+            <span className="text-sm font-bold text-[var(--color-tenant-primary)]">Liên hệ hỗ trợ</span>
+          </button>
+        </div>
+      </section>
     </div>
   );
 }

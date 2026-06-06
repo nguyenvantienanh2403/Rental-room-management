@@ -7,6 +7,14 @@ const CONTRACT_POPULATE = [
   {
     path: "roomId",
     select: "name buildingId price",
+    populate: {
+      path: "buildingId",
+      select: "name address landlordId",
+      populate: {
+        path: "landlordId",
+        select: "fullName phoneNumber identityCard address",
+      },
+    },
   },
   {
     path: "tenantId",

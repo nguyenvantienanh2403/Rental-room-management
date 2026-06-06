@@ -110,7 +110,7 @@ export function LoginForm({ isAdminRoute = false }) {
             Bạn chưa có tài khoản?{" "}
             <button 
               onClick={() => navigate("/register")} 
-              className="text-primary hover:underline font-medium"
+              className="text-neutral-foreground hover:underline font-medium"
             >
               Đăng ký ngay
             </button>

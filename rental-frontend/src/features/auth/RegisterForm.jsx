@@ -120,7 +120,7 @@ export function RegisterForm() {
       <CardFooter className="flex justify-center border-t border-slate-200/20 pt-4 pb-4">
         <p className="text-sm text-muted-foreground">
           Đã có tài khoản?{" "}
-          <button onClick={() => navigate("/login")} className="text-primary hover:underline font-medium">
+          <button onClick={() => navigate("/login")} className="text-neutral-foreground hover:underline font-medium">
             Đăng nhập ngay
           </button>
         </p>

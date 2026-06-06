@@ -14,7 +14,7 @@ export function RoomCard({ room, onEdit, onView, onDelete }) {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-xl font-bold text-slate-900 line-clamp-1" title={room.name}>P.{room.name}</h3>
+                <h3 className="text-xl font-bold text-slate-900 line-clamp-1" title={room.name}>{room.name}</h3>
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase border ${
                   isRented 
                     ? 'bg-primary/10 text-primary border-primary/20' 

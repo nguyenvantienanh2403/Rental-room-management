@@ -25,6 +25,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 
 import { HomePage } from './pages/HomePage';
 import { TenantInvoicesPage } from './pages/tenant/TenantInvoicesPage';
+import { TenantContractsPage } from './pages/tenant/TenantContractsPage';
 
 function App() {
   return (
@@ -40,10 +41,11 @@ function App() {
       <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
       
       {/* Tenant Portal Routes */}
-      <Route path="/t" element={<TenantLayout />}>
-        <Route index element={<TenantDashboard />} />
-        <Route path="invoices" element={<TenantInvoicesPage />} />
-        <Route path="profile" element={<ProfilePage />} />
+      <Route element={<ProtectedRoute><TenantLayout /></ProtectedRoute>}>
+        <Route path="/t" element={<TenantDashboard />} />
+        <Route path="/t/invoices" element={<TenantInvoicesPage />} />
+        <Route path="/t/contracts" element={<TenantContractsPage />} />
+        <Route path="/t/profile" element={<ProfilePage />} />
       </Route>
 
       {/* Admin/Landlord Routes */}

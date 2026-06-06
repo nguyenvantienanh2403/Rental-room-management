@@ -1,12 +1,13 @@
-import { Zap, Droplets } from "lucide-react";
+import { Zap, Droplets, TrendingUp } from "lucide-react";
 
 export function UsageChart({ data }) {
-  // data = [ { month: 'T1', elec: 120, water: 15 }, { month: 'T2', elec: 140, water: 16 }, ... ]
-  
   if (!data || data.length === 0) {
     return (
-      <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center py-8">
-        <p className="text-slate-500 text-sm">Chưa có dữ liệu tiêu thụ</p>
+      <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-6 md:p-8 shadow-xl shadow-[var(--color-tenant-primary)]/5 border border-white flex flex-col items-center justify-center text-center h-full min-h-[280px]">
+        <div className="w-16 h-16 bg-[var(--color-tenant-accent)]/20 text-[var(--color-tenant-primary)]/40 rounded-2xl flex items-center justify-center mb-4">
+          <TrendingUp className="w-8 h-8" />
+        </div>
+        <p className="text-[var(--color-tenant-primary)]/60 font-medium">Chưa có dữ liệu tiêu thụ để hiển thị</p>
       </div>
     );
   }
@@ -16,53 +17,68 @@ export function UsageChart({ data }) {
   const maxWater = Math.max(...data.map(d => d.water)) || 1;
 
   return (
-    <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="font-bold text-slate-800 text-lg">Biểu đồ tiêu thụ</h3>
-        <div className="flex gap-3 text-xs font-medium">
-          <div className="flex items-center gap-1.5 text-amber-600">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Điện
+    <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-6 md:p-8 shadow-xl shadow-[var(--color-tenant-primary)]/5 border border-white h-full flex flex-col">
+      <div className="flex justify-between items-start mb-8">
+        <div>
+          <h3 className="font-black text-xl text-[var(--color-tenant-primary)] tracking-tight">Thống kê tiêu thụ</h3>
+          <p className="text-[var(--color-tenant-primary)]/50 text-xs font-bold uppercase tracking-wider mt-1">6 tháng gần nhất</p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-xs font-bold bg-slate-50/50 p-2 rounded-xl border border-slate-100">
+          <div className="flex items-center gap-2 text-amber-600">
+            <span className="w-3 h-3 rounded-md bg-gradient-to-t from-amber-500 to-amber-300 shadow-sm"></span> Điện
           </div>
-          <div className="flex items-center gap-1.5 text-blue-600">
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-400"></span> Nước
+          <div className="flex items-center gap-2 text-blue-600">
+            <span className="w-3 h-3 rounded-md bg-gradient-to-t from-blue-500 to-blue-300 shadow-sm"></span> Nước
           </div>
         </div>
       </div>
 
-      <div className="h-48 flex items-end justify-between gap-2 px-1">
+      <div className="flex-1 flex items-end justify-between gap-1 sm:gap-3 px-1 mt-auto h-[200px] relative">
+        {/* Horizontal grid lines */}
+        <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20">
+          <div className="w-full h-px bg-[var(--color-tenant-primary)] border-dashed border-t border-[var(--color-tenant-primary)]"></div>
+          <div className="w-full h-px bg-[var(--color-tenant-primary)] border-dashed border-t border-[var(--color-tenant-primary)]"></div>
+          <div className="w-full h-px bg-[var(--color-tenant-primary)] border-dashed border-t border-[var(--color-tenant-primary)]"></div>
+          <div className="w-full h-px bg-[var(--color-tenant-primary)] border-dashed border-t border-[var(--color-tenant-primary)]"></div>
+        </div>
+
         {data.map((item, index) => {
-          const elecHeight = Math.max((item.elec / maxElec) * 100, 5); // min 5%
-          const waterHeight = Math.max((item.water / maxWater) * 100, 5); // min 5%
+          const elecHeight = Math.max((item.elec / maxElec) * 100, 8); // min 8%
+          const waterHeight = Math.max((item.water / maxWater) * 100, 8); // min 8%
+          
+          // Compute animation delay based on index
+          const delay = index * 100;
           
           return (
-            <div key={index} className="flex flex-col items-center flex-1 group">
-              <div className="relative w-full flex justify-center items-end gap-1 h-32 mt-6 mb-2 rounded-lg p-1 hover:bg-slate-50 transition-colors">
+            <div key={index} className="flex flex-col items-center flex-1 group z-10 h-full justify-end">
+              <div className="relative w-full flex justify-center items-end gap-1 sm:gap-2 h-full pb-2 rounded-xl hover:bg-slate-50/50 transition-colors">
                 
-                {/* Always visible data labels */}
-                <div className="absolute -top-8 w-full flex flex-col items-center justify-center text-[9px] sm:text-[10px] font-bold leading-tight z-10">
-                  <span className="text-amber-500 flex items-center drop-shadow-sm"><Zap className="w-2 h-2 sm:w-2.5 sm:h-2.5 mr-0.5"/>{item.elec}</span>
-                  <span className="text-blue-500 flex items-center drop-shadow-sm"><Droplets className="w-2 h-2 sm:w-2.5 sm:h-2.5 mr-0.5"/>{item.water}</span>
+                {/* Data labels tooltip (visible on hover) */}
+                <div className="absolute -top-12 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 bg-[var(--color-tenant-primary)] text-white text-xs font-bold py-1.5 px-3 rounded-xl shadow-xl flex gap-3 pointer-events-none z-20">
+                  <span className="flex items-center text-amber-300"><Zap className="w-3 h-3 mr-1"/>{item.elec}</span>
+                  <span className="flex items-center text-blue-300"><Droplets className="w-3 h-3 mr-1"/>{item.water}</span>
+                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[var(--color-tenant-primary)]"></div>
                 </div>
 
                 {/* Electricity Bar */}
-                <div className="w-full max-w-[12px] md:max-w-[16px] bg-amber-100 rounded-t-sm relative flex items-end overflow-hidden group/bar">
+                <div className="w-full max-w-[14px] sm:max-w-[20px] bg-amber-50 rounded-t-md relative flex items-end overflow-hidden shadow-inner h-full">
                   <div 
-                    className="w-full bg-amber-400 rounded-t-sm transition-all duration-700 ease-out group-hover/bar:bg-amber-500" 
-                    style={{ height: `${elecHeight}%` }}
+                    className="w-full rounded-t-md bg-gradient-to-t from-amber-500 to-amber-300 transition-all duration-1000 ease-out animate-in slide-in-from-bottom-full" 
+                    style={{ height: `${elecHeight}%`, animationDelay: `${delay}ms`, animationFillMode: 'both' }}
                   ></div>
                 </div>
 
                 {/* Water Bar */}
-                <div className="w-full max-w-[12px] md:max-w-[16px] bg-blue-100 rounded-t-sm relative flex items-end overflow-hidden group/bar">
+                <div className="w-full max-w-[14px] sm:max-w-[20px] bg-blue-50 rounded-t-md relative flex items-end overflow-hidden shadow-inner h-full">
                   <div 
-                    className="w-full bg-blue-400 rounded-t-sm transition-all duration-700 ease-out group-hover/bar:bg-blue-500" 
-                    style={{ height: `${waterHeight}%` }}
+                    className="w-full rounded-t-md bg-gradient-to-t from-blue-500 to-blue-300 transition-all duration-1000 ease-out animate-in slide-in-from-bottom-full" 
+                    style={{ height: `${waterHeight}%`, animationDelay: `${delay + 50}ms`, animationFillMode: 'both' }}
                   ></div>
                 </div>
               </div>
-              <span className="text-[10px] md:text-xs font-semibold text-slate-400 group-hover:text-slate-800 transition-colors uppercase">
-                {item.month}
-              </span>
+              
+              {/* X-axis Label */}
+              <span className="text-[10px] sm:text-xs font-bold text-[var(--color-tenant-primary)]/60 mt-2 uppercase tracking-widest">{item.month}</span>
             </div>
           );
         })}
