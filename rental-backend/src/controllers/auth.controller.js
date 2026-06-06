@@ -1,6 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import jwt from "jsonwebtoken";
-import { ApiError, catchAsync, jwt_utils, respone, sendEmail } from "../utils/index.js";
+import { ApiError, catchAsync, jwt_utils, response, sendEmail } from "../utils/index.js";
 import { userModel, token } from "../models/index.js";
 import env from "../config/env.config.js";
 import { authService } from "../services/index.js";
@@ -35,7 +34,7 @@ const getMe = catchAsync(async (req, res) => {
   const user = req.user;
   res
     .status(StatusCodes.OK)
-    .json(respone(StatusCodes.OK, "Lấy thông tin người dùng thành công", user));
+    .json(response(StatusCodes.OK, "Lấy thông tin người dùng thành công", user));
 });
 
 const forgotPassword = catchAsync(async (req, res) => {
@@ -64,7 +63,7 @@ const forgotPassword = catchAsync(async (req, res) => {
       message,
     });
 
-    res.status(StatusCodes.OK).json(respone(StatusCodes.OK, "Đã gửi hướng dẫn khôi phục mật khẩu vào email của bạn"));
+    res.status(StatusCodes.OK).json(response(StatusCodes.OK, "Đã gửi hướng dẫn khôi phục mật khẩu vào email của bạn"));
   } catch (error) {
     // Nếu gửi email lỗi, phải xoá reset token trong DB để bảo mật
     user.passwordResetToken = undefined;
@@ -98,7 +97,7 @@ const resetPassword = catchAsync(async (req, res) => {
 
   await user.save();
 
-  res.status(StatusCodes.OK).json(respone(StatusCodes.OK, "Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại."));
+  res.status(StatusCodes.OK).json(response(StatusCodes.OK, "Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại."));
 });
 
 export { register, login, refreshToken, logout, getMe, forgotPassword, resetPassword };

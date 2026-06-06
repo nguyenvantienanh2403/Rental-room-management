@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import { ApiError, respone } from "../utils/index.js";
+import { ApiError, response } from "../utils/index.js";
 import { roomModel, buildingModel } from "../models/index.js";
 import { ROLES } from "../constants/index.js";
 
@@ -52,7 +52,7 @@ const createRoomService = async (roomData, currentUser) => {
     .populate(ROOM_POPULATE)
     .lean();
 
-  return respone(StatusCodes.CREATED, "Tạo phòng thành công", room);
+  return response(StatusCodes.CREATED, "Tạo phòng thành công", room);
 };
 
 // ---------------------------------------------------------------------------
@@ -83,7 +83,7 @@ const getRoomsByBuildingService = async (buildingId, queryOptions = {}, currentU
     roomModel.countDocuments(filter),
   ]);
 
-  return respone(StatusCodes.OK, "Lấy danh sách phòng thành công", {
+  return response(StatusCodes.OK, "Lấy danh sách phòng thành công", {
     rooms,
     pagination: {
       page: parseInt(page, 10),
@@ -115,7 +115,7 @@ const getPublicRoomsService = async (queryOptions = {}) => {
     roomModel.countDocuments(filter),
   ]);
 
-  return respone(StatusCodes.OK, "Lấy danh sách phòng trống thành công", {
+  return response(StatusCodes.OK, "Lấy danh sách phòng trống thành công", {
     rooms,
     pagination: {
       page: parseInt(page, 10),
@@ -157,7 +157,7 @@ const getAllRoomsService = async (queryOptions = {}, currentUser) => {
     roomModel.countDocuments(filter),
   ]);
 
-  return respone(StatusCodes.OK, "Lấy danh sách tất cả phòng thành công", {
+  return response(StatusCodes.OK, "Lấy danh sách tất cả phòng thành công", {
     rooms,
     pagination: {
       page: parseInt(page, 10),
@@ -181,7 +181,7 @@ const getRoomBySlugService = async (slug, currentUser) => {
   // Check ownership
   await verifyBuildingOwnership(room.buildingId._id || room.buildingId, currentUser);
 
-  return respone(StatusCodes.OK, "Lấy thông tin phòng thành công", room);
+  return response(StatusCodes.OK, "Lấy thông tin phòng thành công", room);
 };
 
 // ---------------------------------------------------------------------------
@@ -229,7 +229,7 @@ const updateRoomService = async (roomId, updateData, currentUser) => {
     .populate(ROOM_POPULATE)
     .lean();
 
-  return respone(StatusCodes.OK, "Cập nhật phòng thành công", updatedRoom);
+  return response(StatusCodes.OK, "Cập nhật phòng thành công", updatedRoom);
 };
 
 // ---------------------------------------------------------------------------
@@ -247,7 +247,7 @@ const deleteRoomService = async (roomId, currentUser) => {
 
   await roomModel.findByIdAndDelete(roomId);
 
-  return respone(StatusCodes.OK, "Xóa phòng thành công");
+  return response(StatusCodes.OK, "Xóa phòng thành công");
 };
 
 // ---------------------------------------------------------------------------
@@ -274,7 +274,7 @@ const uploadRoomImagesService = async (files) => {
   const results = await Promise.all(uploadPromises);
   const imageUrls = results.map(result => result.secure_url);
 
-  return respone(StatusCodes.OK, "Tải ảnh lên thành công", imageUrls);
+  return response(StatusCodes.OK, "Tải ảnh lên thành công", imageUrls);
 };
 
 export {

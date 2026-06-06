@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import { ApiError, respone } from "../utils/index.js";
+import { ApiError, response } from "../utils/index.js";
 import { meterReadingModel, invoiceModel, contractModel } from "../models/index.js";
 
 // Helper to check if invoice exists and is locked
@@ -88,7 +88,7 @@ const createMeterReadingService = async (data) => {
     water: waterData,
   });
 
-  return respone(StatusCodes.CREATED, "Tạo phiếu chốt số thành công", newReading);
+  return response(StatusCodes.CREATED, "Tạo phiếu chốt số thành công", newReading);
 };
 
 const updateMeterReadingService = async (id, data) => {
@@ -152,7 +152,7 @@ const updateMeterReadingService = async (id, data) => {
 
   await reading.save();
 
-  return respone(StatusCodes.OK, "Cập nhật phiếu chốt số thành công", reading);
+  return response(StatusCodes.OK, "Cập nhật phiếu chốt số thành công", reading);
 };
 
 const deleteMeterReadingService = async (id) => {
@@ -167,7 +167,7 @@ const deleteMeterReadingService = async (id) => {
 
   await meterReadingModel.findByIdAndDelete(id);
 
-  return respone(StatusCodes.OK, "Xóa phiếu chốt số thành công");
+  return response(StatusCodes.OK, "Xóa phiếu chốt số thành công");
 };
 
 const getAllMeterReadingsService = async (query = {}) => {
@@ -183,7 +183,7 @@ const getAllMeterReadingsService = async (query = {}) => {
     meterReadingModel.countDocuments(filter),
   ]);
 
-  return respone(StatusCodes.OK, "Lấy danh sách thành công", {
+  return response(StatusCodes.OK, "Lấy danh sách thành công", {
     readings,
     pagination: {
       page: parseInt(page, 10),
@@ -197,7 +197,7 @@ const getAllMeterReadingsService = async (query = {}) => {
 const getMeterReadingByIdService = async (id) => {
   const reading = await meterReadingModel.findById(id).lean();
   if (!reading) throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy phiếu chốt số.");
-  return respone(StatusCodes.OK, "Lấy thông tin thành công", reading);
+  return response(StatusCodes.OK, "Lấy thông tin thành công", reading);
 };
 
 export {

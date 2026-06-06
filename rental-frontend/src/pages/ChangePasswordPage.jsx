@@ -1,12 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Loader2, Key, Check } from "lucide-react";
-import { authService } from "../services/auth.service";
+import { useAuth } from "../context/AuthContext";
 import { userService } from "../services/user.service";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 
 export function ChangePasswordPage() {
-  const [user, setUser] = useState(null);
+  const { user } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
 
@@ -15,18 +15,6 @@ export function ChangePasswordPage() {
     newPassword: "",
     confirmPassword: "",
   });
-
-  useEffect(() => {
-    const fetchMe = async () => {
-      try {
-        const data = await authService.getMe();
-        setUser(data.data || data);
-      } catch (error) {
-        console.error(error);
-      }
-    };
-    fetchMe();
-  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

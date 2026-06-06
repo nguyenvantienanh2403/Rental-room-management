@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Loader2, Camera, Check, User as UserIcon, Shield, Mail, Calendar, Activity, Lock, ArrowRight, X } from "lucide-react";
-import { authService } from "../services/auth.service";
+import { useAuth } from "../context/AuthContext";
 import { userService } from "../services/user.service";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -8,7 +8,7 @@ import { Modal } from "../components/ui/Modal";
 import toast from "react-hot-toast";
 
 export function ProfilePage() {
-  const [user, setUser] = useState(null);
+  const { user, refreshUser } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -53,9 +53,7 @@ export function ProfilePage() {
   const fetchMe = async () => {
     try {
       setIsLoading(true);
-      const data = await authService.getMe();
-      const userData = data.data || data;
-      setUser(userData);
+      const userData = await refreshUser();
       setFormData({
         username: userData.username || "",
         fullName: userData.fullName || "",
@@ -74,6 +72,7 @@ export function ProfilePage() {
       setIsLoading(false);
     }
   };
+
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

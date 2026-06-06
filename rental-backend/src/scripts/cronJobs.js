@@ -9,7 +9,9 @@ const startCronJobs = () => {
     today.setHours(0, 0, 0, 0);
 
     try {
+      // -----------------------------------------------------------------------
       // 1. Quét Hóa Đơn Quá Hạn (OVERDUE_INVOICE)
+      // -----------------------------------------------------------------------
       const overdueInvoices = await invoiceModel
         .find({ status: "issued", dueDate: { $lt: today } })
         .populate({
@@ -22,34 +24,46 @@ const startCronJobs = () => {
           }
         });
 
+      const overdueNotifications = [];
+
       for (const invoice of overdueInvoices) {
         const landlordId = invoice.contractId?.roomId?.buildingId?.landlordId;
         const roomName = invoice.contractId?.roomId?.name;
         
         if (landlordId) {
-          // Check trùng lặp
-          const exists = await notificationModel.exists({
-            type: "OVERDUE_INVOICE",
-            "metadata.invoiceId": invoice._id
+          overdueNotifications.push({
+            updateOne: {
+              filter: {
+                type: "OVERDUE_INVOICE",
+                "metadata.invoiceId": invoice._id
+              },
+              update: {
+                $setOnInsert: {
+                  recipientId: landlordId,
+                  title: "Hóa đơn quá hạn",
+                  message: `Hóa đơn tháng ${invoice.month}/${invoice.year} của ${roomName} đã quá hạn thanh toán.`,
+                  type: "OVERDUE_INVOICE",
+                  metadata: {
+                    invoiceId: invoice._id,
+                    contractId: invoice.contractId._id,
+                    roomId: invoice.contractId.roomId._id
+                  }
+                }
+              },
+              upsert: true
+            }
           });
-
-          if (!exists) {
-            await notificationModel.create({
-              recipientId: landlordId,
-              title: "Hóa đơn quá hạn",
-              message: `Hóa đơn tháng ${invoice.month}/${invoice.year} của ${roomName} đã quá hạn thanh toán.`,
-              type: "OVERDUE_INVOICE",
-              metadata: {
-                invoiceId: invoice._id,
-                contractId: invoice.contractId._id,
-                roomId: invoice.contractId.roomId._id
-              }
-            });
-          }
         }
       }
 
+      if (overdueNotifications.length > 0) {
+        await notificationModel.bulkWrite(overdueNotifications);
+        console.log(`[CRON] Đã ghi nhận ${overdueNotifications.length} thông báo hóa đơn quá hạn.`);
+      }
+
+      // -----------------------------------------------------------------------
       // 2. Quét Hợp Đồng Sắp Hết Hạn & Đã Hết Hạn
+      // -----------------------------------------------------------------------
       const activeContracts = await contractModel
         .find({ status: "active" })
         .populate({
@@ -57,6 +71,9 @@ const startCronJobs = () => {
           select: "name buildingId",
           populate: { path: "buildingId", select: "landlordId name" }
         });
+
+      const expiredContractIds = [];
+      const contractNotifications = [];
 
       for (const contract of activeContracts) {
         const landlordId = contract.roomId?.buildingId?.landlordId;
@@ -70,50 +87,71 @@ const startCronJobs = () => {
           const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
           if (diffDays < 0) {
-            // Hợp đồng đã hết hạn -> Đổi status thành 'expired' và thông báo
-            contract.status = "expired";
-            await contract.save();
-
-            const exists = await notificationModel.exists({
-              type: "CONTRACT_EXPIRED",
-              "metadata.contractId": contract._id
+            // Hợp đồng đã hết hạn
+            expiredContractIds.push(contract._id);
+            contractNotifications.push({
+              updateOne: {
+                filter: {
+                  type: "CONTRACT_EXPIRED",
+                  "metadata.contractId": contract._id
+                },
+                update: {
+                  $setOnInsert: {
+                    recipientId: landlordId,
+                    title: "Hợp đồng hết hạn",
+                    message: `Hợp đồng của ${roomName} đã chính thức hết hạn.`,
+                    type: "CONTRACT_EXPIRED",
+                    metadata: {
+                      contractId: contract._id,
+                      roomId: contract.roomId._id
+                    }
+                  }
+                },
+                upsert: true
+              }
             });
-
-            if (!exists) {
-              await notificationModel.create({
-                recipientId: landlordId,
-                title: "Hợp đồng hết hạn",
-                message: `Hợp đồng của ${roomName} đã chính thức hết hạn.`,
-                type: "CONTRACT_EXPIRED",
-                metadata: {
-                  contractId: contract._id,
-                  roomId: contract.roomId._id
-                }
-              });
-            }
           } else if (diffDays === 30 || diffDays === 7) {
             // Sắp hết hạn (đúng 30 hoặc 7 ngày)
-            const exists = await notificationModel.exists({
-              type: "CONTRACT_EXPIRING",
-              "metadata.contractId": contract._id,
-              "metadata.daysLeft": diffDays
+            contractNotifications.push({
+              updateOne: {
+                filter: {
+                  type: "CONTRACT_EXPIRING",
+                  "metadata.contractId": contract._id,
+                  "metadata.daysLeft": diffDays
+                },
+                update: {
+                  $setOnInsert: {
+                    recipientId: landlordId,
+                    title: "Hợp đồng sắp hết hạn",
+                    message: `Hợp đồng của ${roomName} sẽ hết hạn sau ${diffDays} ngày nữa.`,
+                    type: "CONTRACT_EXPIRING",
+                    metadata: {
+                      contractId: contract._id,
+                      roomId: contract.roomId._id,
+                      daysLeft: diffDays
+                    }
+                  }
+                },
+                upsert: true
+              }
             });
-
-            if (!exists) {
-              await notificationModel.create({
-                recipientId: landlordId,
-                title: "Hợp đồng sắp hết hạn",
-                message: `Hợp đồng của ${roomName} sẽ hết hạn sau ${diffDays} ngày nữa.`,
-                type: "CONTRACT_EXPIRING",
-                metadata: {
-                  contractId: contract._id,
-                  roomId: contract.roomId._id,
-                  daysLeft: diffDays
-                }
-              });
-            }
           }
         }
+      }
+
+      // 1. Cập nhật hàng loạt các hợp đồng đã hết hạn sang 'expired'
+      if (expiredContractIds.length > 0) {
+        await contractModel.updateMany(
+          { _id: { $in: expiredContractIds } },
+          { $set: { status: "expired" } }
+        );
+        console.log(`[CRON] Đã cập nhật trạng thái 'expired' cho ${expiredContractIds.length} hợp đồng.`);
+      }
+
+      // 2. Ghi hàng loạt thông báo hợp đồng hết hạn/sắp hết hạn
+      if (contractNotifications.length > 0) {
+        await notificationModel.bulkWrite(contractNotifications);
+        console.log(`[CRON] Đã ghi nhận ${contractNotifications.length} thông báo liên quan đến hợp đồng.`);
       }
       
       console.log("[CRON] Đã hoàn thành các job kiểm tra định kỳ.");

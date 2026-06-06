@@ -1,6 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 import bcrypt from "bcrypt";
-import { ApiError, respone } from "../utils/index.js";
+import { ApiError, response, escapeRegExp } from "../utils/index.js";
 import { userModel } from "../models/index.js";
 import env from "../config/env.config.js";
 import sendEmail from "../utils/sendEmail.js";
@@ -41,7 +41,7 @@ const getUserByIdService = async (userId) => {
     throw new ApiError(StatusCodes.GONE, "Tài khoản này đã bị vô hiệu hóa");
   }
 
-  return respone(StatusCodes.OK, "Lấy thông tin người dùng thành công", user);
+  return response(StatusCodes.OK, "Lấy thông tin người dùng thành công", user);
 };
 
 // ---------------------------------------------------------------------------
@@ -59,7 +59,7 @@ const getAllUsersService = async (query = {}) => {
 
   // Optional keyword search by username or email
   if (keyword) {
-    const regex = new RegExp(keyword, "i");
+    const regex = new RegExp(escapeRegExp(keyword), "i");
     filter.$or = [{ username: regex }, { email: regex }];
   }
 
@@ -78,7 +78,7 @@ const getAllUsersService = async (query = {}) => {
     userModel.countDocuments(filter),
   ]);
 
-  return respone(StatusCodes.OK, "Lấy danh sách người dùng thành công", {
+  return response(StatusCodes.OK, "Lấy danh sách người dùng thành công", {
     users,
     pagination: {
       page: parseInt(page, 10),
@@ -146,7 +146,7 @@ const updateProfileService = async (
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy người dùng");
   }
 
-  return respone(StatusCodes.OK, "Cập nhật hồ sơ thành công", updatedUser);
+  return response(StatusCodes.OK, "Cập nhật hồ sơ thành công", updatedUser);
 };
 
 // ---------------------------------------------------------------------------
@@ -204,10 +204,10 @@ const changePasswordService = async (
   }
 
   // Hash and save the new password
-  user.password = await bcrypt.hash(newPassword, env.BCRYPT_SALT_ROUNDS);
+  user.password = await bcrypt.hash(newPassword, env.bcrypt.saltRounds);
   await user.save();
 
-  return respone(StatusCodes.OK, "Thay đổi mật khẩu thành công");
+  return response(StatusCodes.OK, "Thay đổi mật khẩu thành công");
 };
 
 // ---------------------------------------------------------------------------
@@ -227,7 +227,7 @@ const deleteUserService = async (userId) => {
   user.status = "inactive";
   await user.save();
 
-  return respone(StatusCodes.OK, "Vô hiệu hóa người dùng thành công");
+  return response(StatusCodes.OK, "Vô hiệu hóa người dùng thành công");
 };
 
 // ---------------------------------------------------------------------------
@@ -288,15 +288,16 @@ const requestEmailChangeService = async (userId, data) => {
       message,
     });
   } catch (error) {
-    console.error("Lỗi gửi email:", error);
-    // In OTP ra console log theo yêu cầu của user để test
-    console.log(`[TESTING] OTP cho ${newEmail} là: ${otp}`);
-    
-    // We still return success but notify that email failed to send, maybe it's printed to console.
-    // In production we should throw an error, but here we proceed so user can test via console log.
+    // Log the error details server-side for debugging — NEVER log the OTP value
+    console.error("[EMAIL ERROR] Failed to send OTP email:", error.message);
+    // Re-throw so the caller knows the email failed and can handle accordingly
+    throw new ApiError(
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      "Không thể gửi email xác nhận. Vui lòng thử lại sau."
+    );
   }
 
-  return respone(StatusCodes.OK, "Mã xác nhận đã được gửi đến email mới của bạn");
+  return response(StatusCodes.OK, "Mã xác nhận đã được gửi đến email mới của bạn");
 };
 
 // ---------------------------------------------------------------------------
@@ -340,7 +341,7 @@ const verifyEmailChangeService = async (userId, data) => {
   user.emailChangeExpires = undefined;
   await user.save();
 
-  return respone(StatusCodes.OK, "Đổi địa chỉ email thành công");
+  return response(StatusCodes.OK, "Đổi địa chỉ email thành công");
 };
 
 // ---------------------------------------------------------------------------
@@ -366,7 +367,7 @@ const createLandlordService = async (userData) => {
     role: landlordRole._id,
   });
 
-  return respone(StatusCodes.CREATED, "Tạo tài khoản Chủ nhà thành công", {
+  return response(StatusCodes.CREATED, "Tạo tài khoản Chủ nhà thành công", {
     _id: newUser._id,
     username: newUser.username,
     email: newUser.email,

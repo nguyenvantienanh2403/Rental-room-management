@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import { ApiError, respone } from "../utils/index.js";
+import { ApiError, response } from "../utils/index.js";
 import { buildingModel, roomModel, invoiceModel, contractModel } from "../models/index.js";
 import { ROLES } from "../constants/index.js";
 
@@ -198,7 +198,7 @@ const getOverviewService = async (currentUser) => {
     expiringContracts
   };
 
-  return respone(StatusCodes.OK, "Lấy dữ liệu Dashboard thành công", dashboardData);
+  return response(StatusCodes.OK, "Lấy dữ liệu Dashboard thành công", dashboardData);
 };
 
 export { getOverviewService };

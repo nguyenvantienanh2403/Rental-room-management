@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { StatusCodes } from "http-status-codes";
-import { ApiError, respone } from "../utils/index.js";
+import { ApiError, response } from "../utils/index.js";
 import {
   invoiceModel,
   contractModel,
@@ -224,7 +224,7 @@ const createInvoiceService = async (invoiceData) => {
     await session.commitTransaction();
     session.endSession();
 
-    return respone(
+    return response(
       StatusCodes.CREATED,
       "Tạo hóa đơn thành công",
       populatedInvoice,
@@ -283,7 +283,7 @@ const updateInvoiceService = async (invoiceId, updateData) => {
     .populate(INVOICE_POPULATE)
     .lean();
 
-  return respone(
+  return response(
     StatusCodes.OK,
     "Cập nhật số liệu hóa đơn thành công",
     updatedInvoice,
@@ -372,7 +372,7 @@ const updateInvoiceStatusService = async (invoiceId, newStatus) => {
     }
   }
 
-  return respone(
+  return response(
     StatusCodes.OK,
     "Cập nhật trạng thái hóa đơn thành công",
     updatedInvoice,
@@ -405,7 +405,7 @@ const getAllInvoicesService = async (query = {}) => {
     invoiceModel.countDocuments(filter),
   ]);
 
-  return respone(StatusCodes.OK, "Lấy danh sách hóa đơn thành công", {
+  return response(StatusCodes.OK, "Lấy danh sách hóa đơn thành công", {
     invoices,
     pagination: {
       page: parseInt(page, 10),
@@ -429,7 +429,7 @@ const getInvoiceByIdService = async (invoiceId) => {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy hóa đơn.");
   }
 
-  return respone(StatusCodes.OK, "Lấy thông tin hóa đơn thành công", invoice);
+  return response(StatusCodes.OK, "Lấy thông tin hóa đơn thành công", invoice);
 };
 
 export {

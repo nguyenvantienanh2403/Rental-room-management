@@ -1,4 +1,5 @@
 import slugify from "slugify";
+import escapeRegExp from "./escapeRegExp.js";
 
 export const buildQueryOptions = (keyword, sortBy, sortOrder) => {
   const filter = {};
@@ -20,7 +21,7 @@ export const buildQueryOptions = (keyword, sortBy, sortOrder) => {
       trim: true,
     });
 
-    const regKeyword = new RegExp(keywordSlug, "i");
+    const regKeyword = new RegExp(escapeRegExp(keywordSlug), "i");
     filter.$or = [
       {
         slug: regKeyword,

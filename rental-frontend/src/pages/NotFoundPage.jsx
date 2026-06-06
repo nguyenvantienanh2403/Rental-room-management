@@ -1,32 +1,25 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/Button";
-import { Home, Loader2 } from "lucide-react";
-import { authService } from "../services/auth.service";
-import { useState } from "react";
+import { Home } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 export function NotFoundPage() {
   const navigate = useNavigate();
-  const [isRedirecting, setIsRedirecting] = useState(false);
+  const { user } = useAuth();
 
-  const handleBackToHome = async () => {
-    setIsRedirecting(true);
-    try {
-      const userRes = await authService.getMe();
-      const user = userRes?.data || userRes;
-      const roleName = user?.role?.name || user?.role;
-      
-      if (roleName === 'user') {
-        navigate("/t");
-      } else {
-        navigate("/dashboard");
-      }
-    } catch (error) {
-      // Nếu chưa đăng nhập hoặc token lỗi
+  const handleBackToHome = () => {
+    if (!user) {
       navigate("/login");
-    } finally {
-      setIsRedirecting(false);
+      return;
+    }
+    const roleName = user?.role?.name || user?.role;
+    if (roleName === 'user') {
+      navigate("/t");
+    } else {
+      navigate("/dashboard");
     }
   };
+
 
   return (
     <div className="min-h-screen bg-neutral text-neutral-foreground flex flex-col items-center justify-center p-4">
@@ -39,11 +32,10 @@ export function NotFoundPage() {
         <div className="pt-4 flex justify-center">
           <Button 
             onClick={handleBackToHome}
-            disabled={isRedirecting}
             className="bg-primary hover:bg-secondary text-neutral-foreground border-none transition-all flex items-center justify-center"
             size="lg"
           >
-            {isRedirecting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Home className="mr-2 h-5 w-5" />}
+            <Home className="mr-2 h-5 w-5" />
             Quay lại Trang chủ
           </Button>
         </div>

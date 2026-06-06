@@ -73,7 +73,7 @@ const userSchema = new Schema(
 
 userSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
-  const saltRounds = parseInt(env.BCRYPT_SALT_ROUNDS, 10) || 10;
+  const saltRounds = env.bcrypt.saltRounds;
   this.password = await bcrypt.hash(this.password, saltRounds);
 });
 

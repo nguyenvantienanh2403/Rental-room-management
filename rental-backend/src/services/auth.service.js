@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import { ApiError, respone, jwt_utils } from "../utils/index.js";
+import { ApiError, response, jwt_utils } from "../utils/index.js";
 import { userModel, roleModel, token } from "../models/index.js";
 import bcrypt from "bcrypt";
 import env from "../config/env.config.js";
@@ -27,7 +27,7 @@ const registerService = async (userData) => {
     homeTown,
     role: defaultRole._id,
   });
-  return respone(StatusCodes.CREATED, "Đăng ký thành công", {
+  return response(StatusCodes.CREATED, "Đăng ký thành công", {
     userId: newUser._id,
     username: newUser.username,
     email: newUser.email,
@@ -46,11 +46,11 @@ const loginService = async (email, password, res) => {
   const accessToken = jwt_utils.generateAccessToken(user._id);
   const refreshToken = jwt_utils.generateRefreshToken(user._id);
 
-  // Store refresh token in database or cache for later verification
+  // Store refresh token — expiresAt drives Mongoose TTL auto-deletion after 7 days
   await token.create({
     userId: user._id,
     refreshToken,
-    expiresAt: new Date(),
+    expiresAt: new Date(Date.now() + env.jwt.refreshTokenTtlMs),
   });
   // setup cookie options
   res.cookie("refreshToken", refreshToken, {
@@ -62,7 +62,7 @@ const loginService = async (email, password, res) => {
 
   const userResponse = user.toObject();
   delete userResponse.password; // remove password from response
-  return respone(StatusCodes.OK, "Đăng nhập thành công", {
+  return response(StatusCodes.OK, "Đăng nhập thành công", {
     accessToken,
     user: userResponse,
   });
@@ -92,7 +92,7 @@ const refreshTokenService = async (tokenValue) => {
   }
 
   const newAccessToken = jwt_utils.generateAccessToken(storedToken.userId);
-  return respone(StatusCodes.OK, "Làm mới token thành công", {
+  return response(StatusCodes.OK, "Làm mới token thành công", {
     accessToken: newAccessToken,
   });
 };
@@ -102,7 +102,7 @@ const logoutService = async (refreshToken) => {
     throw new ApiError(StatusCodes.BAD_REQUEST, "Không tìm thấy refresh token");
   }
   await token.deleteOne({ refreshToken: refreshToken }); // remove the refresh token from database
-  return respone(StatusCodes.OK, "Đăng xuất thành công");
+  return response(StatusCodes.OK, "Đăng xuất thành công");
 };
 
 export { registerService, loginService, refreshTokenService, logoutService };

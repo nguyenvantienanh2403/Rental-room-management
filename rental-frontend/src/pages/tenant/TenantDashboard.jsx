@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { HelpCircle, UserCircle2, Bell, ShieldCheck, ChevronRight, FileText, Activity, Wallet, Receipt } from 'lucide-react';
-import { authService } from '../../services/auth.service';
+import { useAuth } from '../../context/AuthContext';
 import { invoiceService } from '../../services/invoice.service';
 import { meterReadingService } from '../../services/meterReading.service';
 import toast from 'react-hot-toast';
@@ -13,7 +13,7 @@ import { notificationService } from '../../services/notification.service';
 import { formatMoney } from '../../utils/format';
 
 export function TenantDashboard() {
-  const [user, setUser] = useState(null);
+  const { user } = useAuth();
   const [invoice, setInvoice] = useState(null);
   const [chartData, setChartData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -34,14 +34,12 @@ export function TenantDashboard() {
     const fetchDashboardData = async () => {
       try {
         setIsLoading(true);
-        // 1. Get user profile
-        const userData = await authService.getMe();
-        setUser(userData.data || userData);
 
-        // 2. Get unpaid invoices
+        // 1. Get unpaid invoices
         const invRes = await invoiceService.getAll({ status: 'issued' });
         const unpaid = invRes.data?.invoices || invRes.data || [];
         if (unpaid.length > 0) {
+
           // Sort by due date, pick the closest one
           const closest = unpaid.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))[0];
           setInvoice(closest);

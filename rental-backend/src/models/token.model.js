@@ -17,5 +17,9 @@ const tokenSchema = new Schema(
   { timestamps: true },
 );
 
+// Indexes for session resolution performance
+tokenSchema.index({ refreshToken: 1 });
+tokenSchema.index({ userId: 1 });
+
 const Token = model("Token", tokenSchema);
 export default Token;

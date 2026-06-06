@@ -50,6 +50,7 @@ const tenantSchema = new Schema(
 // Indexes for performance
 tenantSchema.index({ roomId: 1 });
 tenantSchema.index({ status: 1 });
+tenantSchema.index({ userId: 1 });
 
 const Tenant = model("Tenant", tenantSchema);
 

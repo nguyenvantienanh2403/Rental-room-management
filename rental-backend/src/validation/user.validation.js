@@ -40,17 +40,23 @@ const register = Joi.object({
     }),
 
   phoneNumber: Joi.string()
+    .trim()
+    .pattern(/^[0-9+\-\s()]{7,20}$/)
     .required()
     .messages({
       "any.required": "Số điện thoại là bắt buộc",
       "string.empty": "Số điện thoại không được để trống",
+      "string.pattern.base": "Vui lòng cung cấp số điện thoại hợp lệ",
     }),
 
   identityCard: Joi.string()
+    .trim()
+    .pattern(/^[0-9]{9,12}$/)
     .required()
     .messages({
       "any.required": "CCCD/CMND là bắt buộc",
       "string.empty": "CCCD/CMND không được để trống",
+      "string.pattern.base": "Căn cước công dân phải từ 9 đến 12 số",
     }),
 
   homeTown: Joi.string()
@@ -105,8 +111,20 @@ const updateProfile = Joi.object({
     }),
 
   fullName: Joi.string().allow(""),
-  phoneNumber: Joi.string().allow(""),
-  identityCard: Joi.string().allow(""),
+  phoneNumber: Joi.string()
+    .trim()
+    .pattern(/^[0-9+\-\s()]{7,20}$/)
+    .allow("")
+    .messages({
+      "string.pattern.base": "Vui lòng cung cấp số điện thoại hợp lệ",
+    }),
+  identityCard: Joi.string()
+    .trim()
+    .pattern(/^[0-9]{9,12}$/)
+    .allow("")
+    .messages({
+      "string.pattern.base": "Căn cước công dân phải từ 9 đến 12 số",
+    }),
   homeTown: Joi.string().allow(""),
   bankInfo: Joi.object({
     bankId: Joi.string().allow(""),

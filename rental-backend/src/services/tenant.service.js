@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import { ApiError, respone } from "../utils/index.js";
+import { ApiError, response } from "../utils/index.js";
 import { tenantModel, roomModel, buildingModel } from "../models/index.js";
 import { ROLES } from "../constants/index.js";
 
@@ -85,7 +85,7 @@ const rentRoomService = async (roomId, currentUser) => {
     .populate(TENANT_POPULATE)
     .lean();
 
-  return respone(StatusCodes.CREATED, "Thuê phòng thành công", tenant);
+  return response(StatusCodes.CREATED, "Thuê phòng thành công", tenant);
 };
 
 // ---------------------------------------------------------------------------
@@ -123,7 +123,7 @@ const createTenantService = async (tenantData, currentUser) => {
     .populate(TENANT_POPULATE)
     .lean();
 
-  return respone(StatusCodes.CREATED, "Tạo khách thuê thành công", tenant);
+  return response(StatusCodes.CREATED, "Tạo khách thuê thành công", tenant);
 };
 
 // ---------------------------------------------------------------------------
@@ -150,7 +150,7 @@ const getAllTenantsService = async (queryOptions = {}, currentUser) => {
     .sort({ createdAt: -1 })
     .lean();
 
-  return respone(StatusCodes.OK, "Lấy danh sách tất cả khách thuê thành công", tenants);
+  return response(StatusCodes.OK, "Lấy danh sách tất cả khách thuê thành công", tenants);
 };
 
 // ---------------------------------------------------------------------------
@@ -165,7 +165,7 @@ const getTenantsByRoomService = async (roomId, currentUser) => {
     .sort({ createdAt: -1 })
     .lean();
 
-  return respone(StatusCodes.OK, "Lấy danh sách khách thuê thành công", tenants);
+  return response(StatusCodes.OK, "Lấy danh sách khách thuê thành công", tenants);
 };
 
 // ---------------------------------------------------------------------------
@@ -178,7 +178,7 @@ const getTenantByIdService = async (tenantId, currentUser) => {
   await verifyRoomOwnership(tenant.roomId, currentUser);
 
   const populatedTenant = await tenantModel.findById(tenantId).populate(TENANT_POPULATE).lean();
-  return respone(StatusCodes.OK, "Lấy thông tin khách thuê thành công", populatedTenant);
+  return response(StatusCodes.OK, "Lấy thông tin khách thuê thành công", populatedTenant);
 };
 
 // ---------------------------------------------------------------------------
@@ -256,7 +256,7 @@ const updateTenantService = async (tenantId, updateData, currentUser) => {
     .populate(TENANT_POPULATE)
     .lean();
 
-  return respone(StatusCodes.OK, "Cập nhật khách thuê thành công", updatedTenant);
+  return response(StatusCodes.OK, "Cập nhật khách thuê thành công", updatedTenant);
 };
 
 // ---------------------------------------------------------------------------
@@ -270,7 +270,7 @@ const deleteTenantService = async (tenantId, currentUser) => {
 
   await tenantModel.findByIdAndDelete(tenantId);
 
-  return respone(StatusCodes.OK, "Xóa khách thuê thành công");
+  return response(StatusCodes.OK, "Xóa khách thuê thành công");
 };
 
 export {

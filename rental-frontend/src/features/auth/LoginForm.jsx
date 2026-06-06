@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { authService } from "../../services/auth.service";
+import { useAuth } from "../../context/AuthContext";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "../../components/ui/Card";
@@ -9,6 +9,7 @@ import { Loader2 } from "lucide-react";
 
 export function LoginForm({ isAdminRoute = false }) {
   const navigate = useNavigate();
+  const { login, logout } = useAuth();
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -28,16 +29,13 @@ export function LoginForm({ isAdminRoute = false }) {
 
     setIsLoading(true);
     try {
-      await authService.login(formData);
-      
-      // Lấy thông tin user để biết Role
-      const userRes = await authService.getMe();
-      const user = userRes?.data || userRes;
+      const res = await login(formData);
+      const user = res?.data?.user || res?.user;
       const roleName = user?.role?.name || user?.role;
       
       // Kiểm tra bảo mật cho Admin
       if (isAdminRoute && roleName !== 'admin') {
-        authService.logout();
+        logout();
         throw new Error("Tài khoản của bạn không phải Admin, vui lòng ra trang chủ để đăng nhập.");
       }
 
@@ -53,6 +51,7 @@ export function LoginForm({ isAdminRoute = false }) {
       setIsLoading(false);
     }
   };
+
 
   return (
     <Card className="w-full max-w-md bg-slate-100 backdrop-blur-md shadow-xl border-white/10 text-neutral-foreground">

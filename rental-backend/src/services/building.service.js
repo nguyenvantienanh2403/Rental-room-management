@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import { ApiError, respone } from "../utils/index.js";
+import { ApiError, response, escapeRegExp } from "../utils/index.js";
 import { buildingModel } from "../models/index.js";
 import { ROLES } from "../constants/index.js";
 
@@ -33,7 +33,7 @@ const createBuildingService = async (currentUser, buildingData) => {
     .populate(BUILDING_POPULATE)
     .lean();
 
-  return respone(StatusCodes.CREATED, "Tạo tòa nhà thành công", building);
+  return response(StatusCodes.CREATED, "Tạo tòa nhà thành công", building);
 };
 
 // ---------------------------------------------------------------------------
@@ -69,17 +69,17 @@ const getAllBuildingsService = async (query = {}, currentUser) => {
 
   // Filter theo city
   if (city) {
-    filter["address.city"] = new RegExp(city, "i");
+    filter["address.city"] = new RegExp(escapeRegExp(city), "i");
   }
 
   // Filter theo district
   if (district) {
-    filter["address.district"] = new RegExp(district, "i");
+    filter["address.district"] = new RegExp(escapeRegExp(district), "i");
   }
 
   // Search keyword theo name hoặc address.street
   if (keyword) {
-    const regex = new RegExp(keyword, "i");
+    const regex = new RegExp(escapeRegExp(keyword), "i");
     filter.$or = [{ name: regex }, { "address.street": regex }];
   }
 
@@ -97,7 +97,7 @@ const getAllBuildingsService = async (query = {}, currentUser) => {
     buildingModel.countDocuments(filter),
   ]);
 
-  return respone(StatusCodes.OK, "Lấy danh sách tòa nhà thành công", {
+  return response(StatusCodes.OK, "Lấy danh sách tòa nhà thành công", {
     buildings,
     pagination: {
       page: parseInt(page, 10),
@@ -144,7 +144,7 @@ const getBuildingBySlugOrIdService = async (identifier, currentUser) => {
     }
   }
 
-  return respone(StatusCodes.OK, "Lấy thông tin tòa nhà thành công", building);
+  return response(StatusCodes.OK, "Lấy thông tin tòa nhà thành công", building);
 };
 
 // ---------------------------------------------------------------------------
@@ -200,7 +200,7 @@ const updateBuildingService = async (currentUser, buildingId, updateData) => {
     .populate(BUILDING_POPULATE)
     .lean();
 
-  return respone(
+  return response(
     StatusCodes.OK,
     "Cập nhật tòa nhà thành công",
     updatedBuilding,
@@ -235,7 +235,7 @@ const deleteBuildingService = async (currentUser, buildingId) => {
   building.status = "inactive";
   await building.save();
 
-  return respone(StatusCodes.OK, "Vô hiệu hóa tòa nhà thành công");
+  return response(StatusCodes.OK, "Vô hiệu hóa tòa nhà thành công");
 };
 
 export {

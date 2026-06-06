@@ -1,4 +1,4 @@
-const respone = (statusCode, message, data = null) => {
+const response = (statusCode, message, data = null) => {
   return {
     statusCode,
     message,
@@ -6,4 +6,4 @@ const respone = (statusCode, message, data = null) => {
   };
 };
 
-export default respone;
+export default response;

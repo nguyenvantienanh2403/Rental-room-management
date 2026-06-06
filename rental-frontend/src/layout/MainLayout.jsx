@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { LogOut, Home, Users, Building, Building2, FileText, Bell, User as UserIcon, Key, UserCog, Menu, X, DoorOpen, Zap, Settings } from "lucide-react";
-import { authService } from "../services/auth.service";
+import { useAuth } from "../context/AuthContext";
 import { NotificationDropdown } from "../components/NotificationDropdown";
 
 export function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [user, setUser] = useState(null);
+  const { user, logout } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -27,22 +27,11 @@ export function MainLayout() {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
-  useEffect(() => {
-    const fetchMe = async () => {
-      try {
-        const data = await authService.getMe();
-        setUser(data.data || data);
-      } catch (error) {
-        console.error("Lỗi lấy thông tin user:", error);
-      }
-    };
-    fetchMe();
-  }, []);
-
   const handleLogout = () => {
-    authService.logout();
+    logout();
     navigate("/login");
   };
+
 
   const navItems = [
     { name: "Tổng quan", icon: Home, path: "/dashboard" },

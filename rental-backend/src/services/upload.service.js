@@ -1,7 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 import streamifier from "streamifier";
 import cloudinary from "../config/cloudinary.config.js";
-import { ApiError, respone } from "../utils/index.js";
+import { ApiError, response } from "../utils/index.js";
 import { userModel } from "../models/index.js";
 
 // ---------------------------------------------------------------------------
@@ -152,7 +152,7 @@ const uploadAvatarService = async (userId, file) => {
     })
     .lean();
 
-  return respone(StatusCodes.OK, "Tải avatar lên thành công", {
+  return response(StatusCodes.OK, "Tải avatar lên thành công", {
     avatar: secure_url,
     public_id,
     user: updatedUser,

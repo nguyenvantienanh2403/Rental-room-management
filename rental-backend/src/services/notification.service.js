@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import { ApiError, respone } from "../utils/index.js";
+import { ApiError, response } from "../utils/index.js";
 import { notificationModel } from "../models/index.js";
 
 // ---------------------------------------------------------------------------
@@ -34,7 +34,7 @@ const getNotificationsService = async (recipientId, query = {}) => {
     notificationModel.countDocuments(filter),
   ]);
 
-  return respone(StatusCodes.OK, "Lấy danh sách thông báo thành công", {
+  return response(StatusCodes.OK, "Lấy danh sách thông báo thành công", {
     notifications,
     pagination: {
       page: parseInt(page, 10),
@@ -50,7 +50,7 @@ const getNotificationsService = async (recipientId, query = {}) => {
 // ---------------------------------------------------------------------------
 const getUnreadCountService = async (recipientId) => {
   const count = await notificationModel.countDocuments({ recipientId, isRead: false });
-  return respone(StatusCodes.OK, "Lấy số lượng thông báo chưa đọc thành công", { count });
+  return response(StatusCodes.OK, "Lấy số lượng thông báo chưa đọc thành công", { count });
 };
 
 // ---------------------------------------------------------------------------
@@ -67,7 +67,7 @@ const markAsReadService = async (recipientId, notificationId) => {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy thông báo hoặc bạn không có quyền");
   }
 
-  return respone(StatusCodes.OK, "Đánh dấu đã đọc thành công", notification);
+  return response(StatusCodes.OK, "Đánh dấu đã đọc thành công", notification);
 };
 
 // ---------------------------------------------------------------------------
@@ -79,7 +79,7 @@ const markAllAsReadService = async (recipientId) => {
     { $set: { isRead: true, readAt: new Date() } }
   );
 
-  return respone(StatusCodes.OK, "Đánh dấu đọc tất cả thành công");
+  return response(StatusCodes.OK, "Đánh dấu đọc tất cả thành công");
 };
 
 export {

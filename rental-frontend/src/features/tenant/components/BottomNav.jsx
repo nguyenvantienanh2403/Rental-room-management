@@ -1,24 +1,11 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Receipt, User, FileSignature, LogOut, ShieldCheck } from 'lucide-react';
-import { authService } from '../../../services/auth.service';
-import { useState, useEffect } from 'react';
+import { useAuth } from '../../../context/AuthContext';
 
 export function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const data = await authService.getMe();
-        setUser(data.data || data);
-      } catch (error) {
-        console.error("Failed to load user:", error);
-      }
-    };
-    fetchUser();
-  }, []);
+  const { user, logout } = useAuth();
 
   const navItems = [
     { id: 'home', path: '/t', icon: Home, label: 'Trang chủ', exact: true },
@@ -28,9 +15,10 @@ export function BottomNav() {
   ];
 
   const handleLogout = () => {
-    authService.logout();
+    logout();
     navigate('/login');
   };
+
 
   const isActive = (item) => {
     if (item.exact) return location.pathname === item.path;

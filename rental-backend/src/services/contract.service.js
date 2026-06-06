@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { StatusCodes } from "http-status-codes";
-import { ApiError, respone } from "../utils/index.js";
+import { ApiError, response } from "../utils/index.js";
 import { contractModel, roomModel, tenantModel } from "../models/index.js";
 
 const CONTRACT_POPULATE = [
@@ -88,7 +88,7 @@ const createContractService = async (contractData) => {
       .populate(CONTRACT_POPULATE)
       .lean();
 
-    return respone(StatusCodes.CREATED, "Tạo hợp đồng thành công", contract);
+    return response(StatusCodes.CREATED, "Tạo hợp đồng thành công", contract);
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
@@ -124,7 +124,7 @@ const getAllContractsService = async (query = {}) => {
     contractModel.countDocuments(filter),
   ]);
 
-  return respone(StatusCodes.OK, "Lấy danh sách hợp đồng thành công", {
+  return response(StatusCodes.OK, "Lấy danh sách hợp đồng thành công", {
     contracts,
     pagination: {
       page: parseInt(page, 10),
@@ -148,108 +148,119 @@ const getContractByIdService = async (contractId) => {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy hợp đồng");
   }
 
-  return respone(StatusCodes.OK, "Lấy thông tin hợp đồng thành công", contract);
+  return response(StatusCodes.OK, "Lấy thông tin hợp đồng thành công", contract);
 };
 
 // ---------------------------------------------------------------------------
 // UPDATE CONTRACT
 // ---------------------------------------------------------------------------
 const updateContractService = async (contractId, updateData) => {
-  const contract = await contractModel.findById(contractId);
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  if (!contract) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy hợp đồng");
-  }
+  try {
+    const contract = await contractModel.findById(contractId).session(session);
 
-  // If changing contractCode
-  if (
-    updateData.contractCode &&
-    updateData.contractCode !== contract.contractCode
-  ) {
-    const existing = await contractModel.findOne({
-      contractCode: updateData.contractCode,
-    });
-    if (existing) {
-      throw new ApiError(StatusCodes.CONFLICT, "Mã hợp đồng đã tồn tại");
-    }
-  }
-
-  // If changing room
-  if (updateData.roomId && updateData.roomId !== contract.roomId.toString()) {
-    const room = await roomModel.findById(updateData.roomId);
-    if (!room) {
-      throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy phòng mới");
-    }
-    if (room.status !== "available") {
-      throw new ApiError(StatusCodes.BAD_REQUEST, "Phòng mới hiện không trống");
+    if (!contract) {
+      throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy hợp đồng");
     }
 
-    // We should ideally update old room to available, new room to rented,
-    // but for simplicity in standard update we leave room logic mostly independent or handle carefully.
-    // Assuming updating roomId is allowed and we handle status:
-    const oldRoom = await roomModel.findById(contract.roomId);
-    if (oldRoom) {
-      oldRoom.status = "available";
-      await oldRoom.save();
+    // If changing contractCode
+    if (
+      updateData.contractCode &&
+      updateData.contractCode !== contract.contractCode
+    ) {
+      const existing = await contractModel.findOne({
+        contractCode: updateData.contractCode,
+      }).session(session);
+      if (existing) {
+        throw new ApiError(StatusCodes.CONFLICT, "Mã hợp đồng đã tồn tại");
+      }
     }
-    room.status = "rented";
-    await room.save();
-  }
 
-  // If status changed to expired or terminated, free up the room
-  if (
-    updateData.status &&
-    updateData.status !== "active" &&
-    contract.status === "active"
-  ) {
-    const currentRoom = await roomModel.findById(contract.roomId);
-    if (currentRoom) {
-      currentRoom.status = "available";
-      await currentRoom.save();
+    // If changing room
+    if (updateData.roomId && updateData.roomId !== contract.roomId.toString()) {
+      const room = await roomModel.findById(updateData.roomId).session(session);
+      if (!room) {
+        throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy phòng mới");
+      }
+      if (room.status !== "available") {
+        throw new ApiError(StatusCodes.BAD_REQUEST, "Phòng mới hiện không trống");
+      }
+
+      // We should ideally update old room to available, new room to rented,
+      // but for simplicity in standard update we leave room logic mostly independent or handle carefully.
+      // Assuming updating roomId is allowed and we handle status:
+      const oldRoom = await roomModel.findById(contract.roomId).session(session);
+      if (oldRoom) {
+        oldRoom.status = "available";
+        await oldRoom.save({ session });
+      }
+      room.status = "rented";
+      await room.save({ session });
     }
-  }
 
-  const allowedFields = [
-    "contractCode",
-    "roomId",
-    "tenantId",
-    "startDate",
-    "endDate",
-    "deposit",
-    "monthlyPrice",
-    "electricityPrice",
-    "waterPrice",
-    "services",
-    "status",
-  ];
-  const sanitizedData = {};
-  for (const field of allowedFields) {
-    if (updateData[field] !== undefined) {
-      sanitizedData[field] = updateData[field];
+    // If status changed to expired or terminated, free up the room
+    if (
+      updateData.status &&
+      updateData.status !== "active" &&
+      contract.status === "active"
+    ) {
+      const currentRoom = await roomModel.findById(contract.roomId).session(session);
+      if (currentRoom) {
+        currentRoom.status = "available";
+        await currentRoom.save({ session });
+      }
     }
-  }
 
-  if (Object.keys(sanitizedData).length === 0) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      "Không có dữ liệu hợp lệ để cập nhật",
+    const allowedFields = [
+      "contractCode",
+      "roomId",
+      "tenantId",
+      "startDate",
+      "endDate",
+      "deposit",
+      "monthlyPrice",
+      "electricityPrice",
+      "waterPrice",
+      "services",
+      "status",
+    ];
+    const sanitizedData = {};
+    for (const field of allowedFields) {
+      if (updateData[field] !== undefined) {
+        sanitizedData[field] = updateData[field];
+      }
+    }
+
+    if (Object.keys(sanitizedData).length === 0) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        "Không có dữ liệu hợp lệ để cập nhật",
+      );
+    }
+
+    const updatedContract = await contractModel
+      .findByIdAndUpdate(
+        contractId,
+        { $set: sanitizedData },
+        { returnDocument: "after", runValidators: true, session },
+      )
+      .populate(CONTRACT_POPULATE);
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return response(
+      StatusCodes.OK,
+      "Cập nhật hợp đồng thành công",
+      updatedContract ? updatedContract.toObject() : null,
     );
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
   }
-
-  const updatedContract = await contractModel
-    .findByIdAndUpdate(
-      contractId,
-      { $set: sanitizedData },
-      { returnDocument: "after", runValidators: true },
-    )
-    .populate(CONTRACT_POPULATE)
-    .lean();
-
-  return respone(
-    StatusCodes.OK,
-    "Cập nhật hợp đồng thành công",
-    updatedContract,
-  );
 };
 
 // ---------------------------------------------------------------------------
@@ -273,7 +284,7 @@ const deleteContractService = async (contractId) => {
 
   await contractModel.findByIdAndDelete(contractId);
 
-  return respone(StatusCodes.OK, "Xóa hợp đồng thành công");
+  return response(StatusCodes.OK, "Xóa hợp đồng thành công");
 };
 
 export {

@@ -4,15 +4,15 @@ import { Search, MapPin, Home as HomeIcon, LogIn, ArrowRight, BedDouble, Maximiz
 import { Button } from "../components/ui/Button";
 import { roomService } from "../services/room.service";
 import { tenantService } from "../services/tenant.service";
-import { authService } from "../services/auth.service";
+import { useAuth } from "../context/AuthContext";
 import { ImageCarousel } from "../components/ui/ImageCarousel";
 import toast from "react-hot-toast";
 
 export function HomePage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [rooms, setRooms] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState(null);
   const [scrolled, setScrolled] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -31,14 +31,6 @@ export function HomePage() {
     const fetchRooms = async () => {
       setIsLoading(true);
       try {
-        try {
-          const userRes = await authService.getMe();
-          const userData = userRes?.data || userRes;
-          setUser(userData);
-        } catch (err) {
-          setUser(null);
-        }
-
         const res = await roomService.getPublic({ status: "available" });
         const roomData = Array.isArray(res) ? res : (res?.data?.rooms || res?.data || []);
         setRooms(roomData);
@@ -50,6 +42,7 @@ export function HomePage() {
     };
     fetchRooms();
   }, []);
+
 
   const handleRentClick = async (roomId) => {
     if (!user) {
