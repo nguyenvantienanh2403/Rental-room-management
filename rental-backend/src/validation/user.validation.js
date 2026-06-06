@@ -103,6 +103,17 @@ const updateProfile = Joi.object({
     .messages({
       "string.uri": "Avatar phải là một URL hợp lệ",
     }),
+
+  fullName: Joi.string().allow(""),
+  phoneNumber: Joi.string().allow(""),
+  identityCard: Joi.string().allow(""),
+  homeTown: Joi.string().allow(""),
+  bankInfo: Joi.object({
+    bankId: Joi.string().allow(""),
+    accountNumber: Joi.string().allow(""),
+    accountName: Joi.string().allow("")
+  }).optional()
+
 }).min(1).messages({
   "object.min": "Phải cung cấp ít nhất một trường để cập nhật",
 });

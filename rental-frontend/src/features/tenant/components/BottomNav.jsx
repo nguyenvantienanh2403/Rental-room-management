@@ -8,7 +8,6 @@ export function BottomNav() {
   const navItems = [
     { id: 'home', path: '/t', icon: Home, label: 'Trang chủ' },
     { id: 'invoices', path: '/t/invoices', icon: Receipt, label: 'Hóa đơn' },
-    { id: 'issues', path: '/t/issues', icon: Wrench, label: 'Sự cố' },
     { id: 'profile', path: '/t/profile', icon: User, label: 'Cá nhân' }
   ];
 

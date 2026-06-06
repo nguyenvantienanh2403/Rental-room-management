@@ -24,6 +24,7 @@ import { TenantDashboard } from './pages/tenant/TenantDashboard';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 import { HomePage } from './pages/HomePage';
+import { TenantInvoicesPage } from './pages/tenant/TenantInvoicesPage';
 
 function App() {
   return (
@@ -41,6 +42,7 @@ function App() {
       {/* Tenant Portal Routes */}
       <Route path="/t" element={<TenantLayout />}>
         <Route index element={<TenantDashboard />} />
+        <Route path="invoices" element={<TenantInvoicesPage />} />
         <Route path="profile" element={<ProfilePage />} />
       </Route>
 

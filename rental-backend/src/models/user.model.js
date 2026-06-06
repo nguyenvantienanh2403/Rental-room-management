@@ -57,6 +57,11 @@ const userSchema = new Schema(
       enum: ["active", "inactive"],
       default: "active",
     },
+    bankInfo: {
+      bankId: { type: String, trim: true },
+      accountNumber: { type: String, trim: true },
+      accountName: { type: String, trim: true },
+    },
     passwordResetToken: String,
     passwordResetExpires: Date,
     newEmailPending: String,

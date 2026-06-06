@@ -20,6 +20,10 @@ const INVOICE_POPULATE = [
         populate: {
           path: "buildingId",
           select: "landlordId",
+          populate: {
+            path: "landlordId",
+            select: "bankInfo fullName phoneNumber",
+          },
         },
       },
       {

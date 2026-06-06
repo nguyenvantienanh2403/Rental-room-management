@@ -16,6 +16,15 @@ export function ProfilePage() {
 
   const [formData, setFormData] = useState({
     username: "",
+    fullName: "",
+    phoneNumber: "",
+    identityCard: "",
+    homeTown: "",
+    bankInfo: {
+      bankId: "",
+      accountNumber: "",
+      accountName: ""
+    }
   });
 
   // Modal Email Change States
@@ -49,6 +58,15 @@ export function ProfilePage() {
       setUser(userData);
       setFormData({
         username: userData.username || "",
+        fullName: userData.fullName || "",
+        phoneNumber: userData.phoneNumber || "",
+        identityCard: userData.identityCard || "",
+        homeTown: userData.homeTown || "",
+        bankInfo: {
+          bankId: userData.bankInfo?.bankId || "",
+          accountNumber: userData.bankInfo?.accountNumber || "",
+          accountName: userData.bankInfo?.accountName || ""
+        }
       });
     } catch (error) {
       toast.error("Không thể tải thông tin hồ sơ.");
@@ -59,6 +77,13 @@ export function ProfilePage() {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleBankChange = (e) => {
+    setFormData({ 
+      ...formData, 
+      bankInfo: { ...formData.bankInfo, [e.target.name]: e.target.value } 
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -260,6 +285,40 @@ export function ProfilePage() {
                   className="bg-white border-slate-300 focus:ring-primary shadow-sm"
                 />
               </div>
+
+              {user?.role?.name?.toLowerCase() !== 'user' && (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-2">Họ và tên</label>
+                      <Input name="fullName" value={formData.fullName} onChange={handleChange} className="bg-white" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-2">Số điện thoại</label>
+                      <Input name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} className="bg-white" />
+                    </div>
+                  </div>
+                  
+                  <div className="mt-8 pt-6 border-t border-slate-100">
+                    <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4">Thông tin Ngân hàng (Nhận tiền thuê)</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Ngân hàng (Ví dụ: MB, VCB, TCB...)</label>
+                        <Input name="bankId" value={formData.bankInfo.bankId} onChange={handleBankChange} placeholder="Tên viết tắt ngân hàng" className="bg-white uppercase" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Số tài khoản</label>
+                        <Input name="accountNumber" value={formData.bankInfo.accountNumber} onChange={handleBankChange} placeholder="Nhập số tài khoản" className="bg-white font-mono" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Tên chủ tài khoản</label>
+                      <Input name="accountName" value={formData.bankInfo.accountName} onChange={handleBankChange} placeholder="VIẾT HOA KHÔNG DẤU" className="bg-white uppercase" />
+                    </div>
+                    <p className="text-xs text-slate-500 mt-2 italic">* Thông tin này sẽ được dùng để tạo mã QR thanh toán tự động cho Khách thuê.</p>
+                  </div>
+                </>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-2">

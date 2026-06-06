@@ -72,7 +72,7 @@ export function TenantDashboard() {
   }, []);
 
   const handlePayClick = (inv) => {
-    toast.success("Tính năng hiển thị mã VietQR đang được phát triển!");
+    navigate('/t/invoices');
   };
 
   const handleLogout = () => {

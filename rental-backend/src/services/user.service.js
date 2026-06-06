@@ -106,7 +106,7 @@ const updateProfileService = async (
   }
 
   // Whitelist of fields users are allowed to update
-  const allowedFields = ["username", "avatar"];
+  const allowedFields = ["username", "avatar", "fullName", "phoneNumber", "identityCard", "homeTown", "bankInfo"];
   const sanitizedData = {};
   for (const field of allowedFields) {
     if (updateData[field] !== undefined) {
