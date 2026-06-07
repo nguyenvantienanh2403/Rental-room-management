@@ -1,23 +1,23 @@
 import { StatusCodes } from "http-status-codes";
 import { ApiError, response, jwt_utils } from "../utils/index.js";
-import { userModel, roleModel, token } from "../models/index.js";
+import { userRepository, roleRepository, tokenRepository } from "../repositories/index.js";
 import bcrypt from "bcrypt";
 import env from "../config/env.config.js";
 
 const registerService = async (userData) => {
   const { username, email, password, fullName, phoneNumber, identityCard, homeTown } = userData;
-  const existingUser = await userModel.findOne({ email });
+  const existingUser = await userRepository.findOne({ email });
   if (existingUser) {
     throw new ApiError(StatusCodes.BAD_REQUEST, "Email đã được sử dụng");
   }
 
-  let defaultRole = await roleModel.findOne({ name: "user" });
+  let defaultRole = await roleRepository.findOne({ name: "user" });
   if (!defaultRole) {
     // Tự động tạo role user (khách thuê) nếu chưa có trong DB để tránh lỗi 500
-    defaultRole = await roleModel.create({ name: "user", permissions: [] });
+    defaultRole = await roleRepository.create({ name: "user", permissions: [] });
   }
 
-  const newUser = await userModel.create({
+  const newUser = await userRepository.create({
     username,
     email,
     password,
@@ -35,7 +35,12 @@ const registerService = async (userData) => {
 };
 
 const loginService = async (email, password, res) => {
-  const user = await userModel.findOne({ email }).populate("role");
+  const user = await userRepository.findOne({ email }, {
+    populate: {
+      path: "role",
+      populate: { path: "permissions" },
+    }
+  });
   if (!user) {
     throw new ApiError(StatusCodes.UNAUTHORIZED, "Email hoặc mật khẩu không hợp lệ");
   }
@@ -43,11 +48,11 @@ const loginService = async (email, password, res) => {
   if (!isMatch) {
     throw new ApiError(StatusCodes.UNAUTHORIZED, "Email hoặc mật khẩu không hợp lệ");
   }
-  const accessToken = jwt_utils.generateAccessToken(user._id);
+  const accessToken = jwt_utils.generateAccessToken(user);
   const refreshToken = jwt_utils.generateRefreshToken(user._id);
 
   // Store refresh token — expiresAt drives Mongoose TTL auto-deletion after 7 days
-  await token.create({
+  await tokenRepository.create({
     userId: user._id,
     refreshToken,
     expiresAt: new Date(Date.now() + env.jwt.refreshTokenTtlMs),
@@ -72,7 +77,7 @@ const refreshTokenService = async (tokenValue) => {
   if (!tokenValue) {
     throw new ApiError(StatusCodes.UNAUTHORIZED, "Không tìm thấy refresh token");
   }
-  const storedToken = await token.findOne({ refreshToken: tokenValue });
+  const storedToken = await tokenRepository.findOne({ refreshToken: tokenValue });
   if (!storedToken) {
     throw new ApiError(StatusCodes.UNAUTHORIZED, "Refresh token không hợp lệ");
   }
@@ -81,7 +86,7 @@ const refreshTokenService = async (tokenValue) => {
     decoded = jwt_utils.verifyRefreshToken(tokenValue);
   } catch (err) {
     if (err.name === "TokenExpiredError") {
-      await token.deleteOne({ refreshToken: tokenValue }); // remove expired token from database
+      await tokenRepository.deleteOne({ refreshToken: tokenValue }); // remove expired token from database
       throw new ApiError(StatusCodes.UNAUTHORIZED, "Refresh token đã hết hạn");
     }
     throw new ApiError(StatusCodes.UNAUTHORIZED, "Refresh token không hợp lệ");
@@ -91,7 +96,17 @@ const refreshTokenService = async (tokenValue) => {
     throw new ApiError(StatusCodes.UNAUTHORIZED, "Refresh token không hợp lệ");
   }
 
-  const newAccessToken = jwt_utils.generateAccessToken(storedToken.userId);
+  const user = await userRepository.findById(storedToken.userId, {
+    populate: {
+      path: "role",
+      populate: { path: "permissions" },
+    }
+  });
+  if (!user) {
+    throw new ApiError(StatusCodes.UNAUTHORIZED, "Không tìm thấy người dùng");
+  }
+
+  const newAccessToken = jwt_utils.generateAccessToken(user);
   return response(StatusCodes.OK, "Làm mới token thành công", {
     accessToken: newAccessToken,
   });
@@ -101,7 +116,7 @@ const logoutService = async (refreshToken) => {
   if (!refreshToken) {
     throw new ApiError(StatusCodes.BAD_REQUEST, "Không tìm thấy refresh token");
   }
-  await token.deleteOne({ refreshToken: refreshToken }); // remove the refresh token from database
+  await tokenRepository.deleteOne({ refreshToken: refreshToken }); // remove the refresh token from database
   return response(StatusCodes.OK, "Đăng xuất thành công");
 };
 

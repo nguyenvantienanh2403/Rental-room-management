@@ -1,12 +1,12 @@
 import { StatusCodes } from "http-status-codes";
 import { ApiError, response } from "../utils/index.js";
-import { notificationModel } from "../models/index.js";
+import { notificationRepository } from "../repositories/index.js";
 
 // ---------------------------------------------------------------------------
 // CREATE NOTIFICATION (INTERNAL)
 // ---------------------------------------------------------------------------
 const createNotificationService = async (data) => {
-  const notification = await notificationModel.create(data);
+  const notification = await notificationRepository.create(data);
   return notification;
 };
 
@@ -25,13 +25,13 @@ const getNotificationsService = async (recipientId, query = {}) => {
   const limitNum = parseInt(limit, 10);
 
   const [notifications, totalCount] = await Promise.all([
-    notificationModel
-      .find(filter)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limitNum)
-      .lean(),
-    notificationModel.countDocuments(filter),
+    notificationRepository.find(filter, {
+      sort: { createdAt: -1 },
+      skip,
+      limit: limitNum,
+      lean: true,
+    }),
+    notificationRepository.countDocuments(filter),
   ]);
 
   return response(StatusCodes.OK, "Lấy danh sách thông báo thành công", {
@@ -49,7 +49,7 @@ const getNotificationsService = async (recipientId, query = {}) => {
 // GET UNREAD COUNT
 // ---------------------------------------------------------------------------
 const getUnreadCountService = async (recipientId) => {
-  const count = await notificationModel.countDocuments({ recipientId, isRead: false });
+  const count = await notificationRepository.countDocuments({ recipientId, isRead: false });
   return response(StatusCodes.OK, "Lấy số lượng thông báo chưa đọc thành công", { count });
 };
 
@@ -57,7 +57,7 @@ const getUnreadCountService = async (recipientId) => {
 // MARK AS READ (SINGLE)
 // ---------------------------------------------------------------------------
 const markAsReadService = async (recipientId, notificationId) => {
-  const notification = await notificationModel.findOneAndUpdate(
+  const notification = await notificationRepository.findOneAndUpdate(
     { _id: notificationId, recipientId },
     { $set: { isRead: true, readAt: new Date() } },
     { new: true }
@@ -74,7 +74,7 @@ const markAsReadService = async (recipientId, notificationId) => {
 // MARK ALL AS READ
 // ---------------------------------------------------------------------------
 const markAllAsReadService = async (recipientId) => {
-  await notificationModel.updateMany(
+  await notificationRepository.updateMany(
     { recipientId, isRead: false },
     { $set: { isRead: true, readAt: new Date() } }
   );

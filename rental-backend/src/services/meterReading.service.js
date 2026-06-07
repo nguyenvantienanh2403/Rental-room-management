@@ -1,10 +1,10 @@
 import { StatusCodes } from "http-status-codes";
 import { ApiError, response } from "../utils/index.js";
-import { meterReadingModel, invoiceModel, contractModel } from "../models/index.js";
+import { meterReadingRepository, invoiceRepository, contractRepository } from "../repositories/index.js";
 
 // Helper to check if invoice exists and is locked
 const checkInvoiceLock = async (contractId, month, year) => {
-  const invoice = await invoiceModel.findOne({ contractId, month, year });
+  const invoice = await invoiceRepository.findOne({ contractId, month, year });
   if (invoice && invoice.status !== "draft") {
     throw new ApiError(StatusCodes.BAD_REQUEST, "Phiếu chốt số đã được lập hóa đơn chính thức, không thể thay đổi hoặc xóa.");
   }
@@ -12,7 +12,7 @@ const checkInvoiceLock = async (contractId, month, year) => {
 
 // Helper to check chain constraint
 const checkChainConstraint = async (contractId, meterReadingId) => {
-  const latestReading = await meterReadingModel.findOne({ contractId }).sort({ year: -1, month: -1 });
+  const latestReading = await meterReadingRepository.findOne({ contractId }, { sort: { year: -1, month: -1 } });
   if (latestReading && latestReading._id.toString() !== meterReadingId.toString()) {
     throw new ApiError(StatusCodes.BAD_REQUEST, "Chỉ được phép sửa/xóa phiếu chốt số mới nhất của hợp đồng để tránh sai lệch chuỗi kế thừa.");
   }
@@ -22,17 +22,17 @@ const createMeterReadingService = async (data) => {
   const { contractId, month, year, electricity, water } = data;
 
   // Validate Contract
-  const contract = await contractModel.findById(contractId);
+  const contract = await contractRepository.findById(contractId);
   if (!contract) throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy hợp đồng.");
 
   // Logic 4: De-duplication
-  const existing = await meterReadingModel.findOne({ contractId, month, year });
+  const existing = await meterReadingRepository.findOne({ contractId, month, year });
   if (existing) {
     throw new ApiError(StatusCodes.BAD_REQUEST, "Phiếu chốt số cho tháng này đã tồn tại.");
   }
 
   // Find previous reading for inheritance
-  const prevReading = await meterReadingModel.findOne({ contractId }).sort({ year: -1, month: -1 });
+  const prevReading = await meterReadingRepository.findOne({ contractId }, { sort: { year: -1, month: -1 } });
   
   // Also enforce chronological creation to prevent breaking chain
   if (prevReading) {
@@ -80,7 +80,7 @@ const createMeterReadingService = async (data) => {
     };
   }
 
-  const newReading = await meterReadingModel.create({
+  const newReading = await meterReadingRepository.create({
     contractId,
     month,
     year,
@@ -92,7 +92,7 @@ const createMeterReadingService = async (data) => {
 };
 
 const updateMeterReadingService = async (id, data) => {
-  const reading = await meterReadingModel.findById(id);
+  const reading = await meterReadingRepository.findById(id);
   if (!reading) throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy phiếu chốt số.");
 
   // Logic 5: Immutability via Invoice
@@ -101,10 +101,10 @@ const updateMeterReadingService = async (id, data) => {
   // Chain Constraint
   await checkChainConstraint(reading.contractId, reading._id);
 
-  const prevReading = await meterReadingModel.findOne({ 
+  const prevReading = await meterReadingRepository.findOne({ 
     contractId: reading.contractId,
     _id: { $ne: reading._id }
-  }).sort({ year: -1, month: -1 });
+  }, { sort: { year: -1, month: -1 } });
 
   // Update Electricity
   if (data.electricity) {
@@ -156,7 +156,7 @@ const updateMeterReadingService = async (id, data) => {
 };
 
 const deleteMeterReadingService = async (id) => {
-  const reading = await meterReadingModel.findById(id);
+  const reading = await meterReadingRepository.findById(id);
   if (!reading) throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy phiếu chốt số.");
 
   // Logic 5: Immutability via Invoice
@@ -165,7 +165,7 @@ const deleteMeterReadingService = async (id) => {
   // Chain Constraint
   await checkChainConstraint(reading.contractId, reading._id);
 
-  await meterReadingModel.findByIdAndDelete(id);
+  await meterReadingRepository.findByIdAndDelete(id);
 
   return response(StatusCodes.OK, "Xóa phiếu chốt số thành công");
 };
@@ -179,8 +179,8 @@ const getAllMeterReadingsService = async (query = {}) => {
   const limitNum = parseInt(limit, 10);
 
   const [readings, totalCount] = await Promise.all([
-    meterReadingModel.find(filter).sort({ year: -1, month: -1 }).skip(skip).limit(limitNum).lean(),
-    meterReadingModel.countDocuments(filter),
+    meterReadingRepository.find(filter, { sort: { year: -1, month: -1 }, skip, limit: limitNum, lean: true }),
+    meterReadingRepository.countDocuments(filter),
   ]);
 
   return response(StatusCodes.OK, "Lấy danh sách thành công", {
@@ -195,7 +195,7 @@ const getAllMeterReadingsService = async (query = {}) => {
 };
 
 const getMeterReadingByIdService = async (id) => {
-  const reading = await meterReadingModel.findById(id).lean();
+  const reading = await meterReadingRepository.findById(id, { lean: true });
   if (!reading) throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy phiếu chốt số.");
   return response(StatusCodes.OK, "Lấy thông tin thành công", reading);
 };

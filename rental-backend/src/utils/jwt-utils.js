@@ -12,8 +12,21 @@ const extractToken = (req) => {
 };
 
 // Tạo access token
-const generateAccessToken = (UserId) => {
-  const payload = { id: UserId };
+const generateAccessToken = (userOrId) => {
+  let payload = {};
+  if (userOrId && typeof userOrId === "object") {
+    payload = {
+      id: userOrId._id || userOrId.id,
+      role: userOrId.role ? {
+        _id: userOrId.role._id,
+        name: userOrId.role.name,
+        permissions: (userOrId.role.permissions || []).map((p) => p.name || p),
+      } : null,
+    };
+  } else {
+    payload = { id: userOrId };
+  }
+
   const token = jwt.sign(payload, env.jwt.accessTokenSecret, {
     expiresIn: env.jwt.accessTokenExpiresIn,
   });

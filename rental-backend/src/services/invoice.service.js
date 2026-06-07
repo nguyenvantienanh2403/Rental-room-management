@@ -2,12 +2,12 @@ import mongoose from "mongoose";
 import { StatusCodes } from "http-status-codes";
 import { ApiError, response } from "../utils/index.js";
 import {
-  invoiceModel,
-  contractModel,
-  meterReadingModel,
-  tenantModel,
-  notificationModel,
-} from "../models/index.js";
+  invoiceRepository,
+  contractRepository,
+  meterReadingRepository,
+  tenantRepository,
+  notificationRepository,
+} from "../repositories/index.js";
 
 const INVOICE_POPULATE = [
   {
@@ -70,9 +70,7 @@ const createInvoiceService = async (invoiceData) => {
     } = invoiceData;
 
     // Logic 1: De-duplication
-    const existingInvoice = await invoiceModel
-      .findOne({ contractId, month, year })
-      .session(session);
+    const existingInvoice = await invoiceRepository.findOne({ contractId, month, year }, { session });
     if (existingInvoice) {
       throw new ApiError(
         StatusCodes.BAD_REQUEST,
@@ -81,9 +79,7 @@ const createInvoiceService = async (invoiceData) => {
     }
 
     // B1: Lấy phiếu chốt số
-    const meterReading = await meterReadingModel
-      .findOne({ contractId, month, year })
-      .session(session);
+    const meterReading = await meterReadingRepository.findOne({ contractId, month, year }, { session });
     if (!meterReading) {
       throw new ApiError(
         StatusCodes.BAD_REQUEST,
@@ -92,7 +88,7 @@ const createInvoiceService = async (invoiceData) => {
     }
 
     // B2: Lấy thông tin Contract để lấy đơn giá
-    const contract = await contractModel.findById(contractId).session(session);
+    const contract = await contractRepository.findById(contractId, { session });
     if (!contract) {
       throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy hợp đồng.");
     }
@@ -104,9 +100,7 @@ const createInvoiceService = async (invoiceData) => {
     }
 
     // Lấy số lượng người thuê đang ở trong phòng của hợp đồng này
-    const numberOfTenants = await tenantModel
-      .countDocuments({ roomId: contract.roomId, status: "active" })
-      .session(session);
+    const numberOfTenants = await tenantRepository.countDocuments({ roomId: contract.roomId, status: "active" }, { session });
 
     // B3: Tính tiền điện
     const electricityUsed = Math.max(
@@ -179,16 +173,13 @@ const createInvoiceService = async (invoiceData) => {
       status: "draft",
     };
 
-    const newInvoices = await invoiceModel.create([newInvoiceData], {
-      session,
-    });
-    const newInvoice = newInvoices[0];
+    const newInvoice = await invoiceRepository.create(newInvoiceData, { session });
 
-    const populatedInvoice = await invoiceModel
-      .findById(newInvoice._id)
-      .populate(INVOICE_POPULATE)
-      .session(session)
-      .lean();
+    const populatedInvoice = await invoiceRepository.findById(newInvoice._id, {
+      populate: INVOICE_POPULATE,
+      session,
+      lean: true,
+    });
 
     // Bắn thông báo NEW_INVOICE
     const landlordId = populatedInvoice.contractId?.roomId?.buildingId?.landlordId;
@@ -218,7 +209,7 @@ const createInvoiceService = async (invoiceData) => {
     }
 
     if (notificationsToCreate.length > 0) {
-      await notificationModel.create(notificationsToCreate, { session });
+      await notificationRepository.create(notificationsToCreate, { session });
     }
 
     await session.commitTransaction();
@@ -240,7 +231,7 @@ const createInvoiceService = async (invoiceData) => {
 // UPDATE INVOICE
 // ---------------------------------------------------------------------------
 const updateInvoiceService = async (invoiceId, updateData) => {
-  const invoice = await invoiceModel.findById(invoiceId);
+  const invoice = await invoiceRepository.findById(invoiceId);
 
   if (!invoice) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy hóa đơn.");
@@ -278,10 +269,10 @@ const updateInvoiceService = async (invoiceId, updateData) => {
 
   await invoice.save();
 
-  const updatedInvoice = await invoiceModel
-    .findById(invoiceId)
-    .populate(INVOICE_POPULATE)
-    .lean();
+  const updatedInvoice = await invoiceRepository.findById(invoiceId, {
+    populate: INVOICE_POPULATE,
+    lean: true,
+  });
 
   return response(
     StatusCodes.OK,
@@ -294,7 +285,7 @@ const updateInvoiceService = async (invoiceId, updateData) => {
 // UPDATE INVOICE STATUS
 // ---------------------------------------------------------------------------
 const updateInvoiceStatusService = async (invoiceId, newStatus) => {
-  const invoice = await invoiceModel.findById(invoiceId);
+  const invoice = await invoiceRepository.findById(invoiceId);
 
   if (!invoice) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy hóa đơn.");
@@ -334,10 +325,10 @@ const updateInvoiceStatusService = async (invoiceId, newStatus) => {
   invoice.status = newStatus;
   await invoice.save();
 
-  const updatedInvoice = await invoiceModel
-    .findById(invoiceId)
-    .populate(INVOICE_POPULATE)
-    .lean();
+  const updatedInvoice = await invoiceRepository.findById(invoiceId, {
+    populate: INVOICE_POPULATE,
+    lean: true,
+  });
 
   // Bắn thông báo INVOICE_PAID nếu trạng thái là paid
   if (newStatus === "paid") {
@@ -368,7 +359,7 @@ const updateInvoiceStatusService = async (invoiceId, newStatus) => {
     }
 
     if (notificationsToCreate.length > 0) {
-      await notificationModel.create(notificationsToCreate);
+      await notificationRepository.create(notificationsToCreate);
     }
   }
 
@@ -395,14 +386,14 @@ const getAllInvoicesService = async (query = {}) => {
   const limitNum = parseInt(limit, 10);
 
   const [invoices, totalCount] = await Promise.all([
-    invoiceModel
-      .find(filter)
-      .populate(INVOICE_POPULATE)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limitNum)
-      .lean(),
-    invoiceModel.countDocuments(filter),
+    invoiceRepository.find(filter, {
+      populate: INVOICE_POPULATE,
+      sort: { createdAt: -1 },
+      skip,
+      limit: limitNum,
+      lean: true,
+    }),
+    invoiceRepository.countDocuments(filter),
   ]);
 
   return response(StatusCodes.OK, "Lấy danh sách hóa đơn thành công", {
@@ -420,10 +411,10 @@ const getAllInvoicesService = async (query = {}) => {
 // GET INVOICE BY ID
 // ---------------------------------------------------------------------------
 const getInvoiceByIdService = async (invoiceId) => {
-  const invoice = await invoiceModel
-    .findById(invoiceId)
-    .populate(INVOICE_POPULATE)
-    .lean();
+  const invoice = await invoiceRepository.findById(invoiceId, {
+    populate: INVOICE_POPULATE,
+    lean: true,
+  });
 
   if (!invoice) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy hóa đơn.");

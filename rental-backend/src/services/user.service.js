@@ -1,7 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 import bcrypt from "bcrypt";
 import { ApiError, response, escapeRegExp } from "../utils/index.js";
-import { userModel, roleModel } from "../models/index.js";
+import { userRepository, roleRepository } from "../repositories/index.js";
 import env from "../config/env.config.js";
 import sendEmail from "../utils/sendEmail.js";
 import crypto from "crypto";
@@ -27,11 +27,11 @@ const EXCLUDE_FIELDS = "-password";
 // GET USER BY ID
 // ---------------------------------------------------------------------------
 const getUserByIdService = async (userId) => {
-  const user = await userModel
-    .findById(userId)
-    .select(EXCLUDE_FIELDS)
-    .populate(USER_POPULATE)
-    .lean();
+  const user = await userRepository.findById(userId, {
+    select: EXCLUDE_FIELDS,
+    populate: USER_POPULATE,
+    lean: true,
+  });
 
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy người dùng");
@@ -67,15 +67,15 @@ const getAllUsersService = async (query = {}) => {
   const limitNum = parseInt(limit, 10);
 
   const [users, totalCount] = await Promise.all([
-    userModel
-      .find(filter)
-      .select(EXCLUDE_FIELDS)
-      .populate(USER_POPULATE)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limitNum)
-      .lean(),
-    userModel.countDocuments(filter),
+    userRepository.find(filter, {
+      select: EXCLUDE_FIELDS,
+      populate: USER_POPULATE,
+      sort: { createdAt: -1 },
+      skip,
+      limit: limitNum,
+      lean: true,
+    }),
+    userRepository.countDocuments(filter),
   ]);
 
   return response(StatusCodes.OK, "Lấy danh sách người dùng thành công", {
@@ -123,7 +123,7 @@ const updateProfileService = async (
 
   // Check for duplicate username if being updated
   if (sanitizedData.username) {
-    const existingUsername = await userModel.findOne({
+    const existingUsername = await userRepository.findOne({
       username: sanitizedData.username,
       _id: { $ne: targetUserId },
     });
@@ -132,15 +132,15 @@ const updateProfileService = async (
     }
   }
 
-  const updatedUser = await userModel
-    .findByIdAndUpdate(
-      targetUserId,
-      { $set: sanitizedData },
-      { returnDocument: "after", runValidators: true },
-    )
-    .select(EXCLUDE_FIELDS)
-    .populate(USER_POPULATE)
-    .lean();
+  const updatedUser = await userRepository.findByIdAndUpdate(
+    targetUserId,
+    { $set: sanitizedData },
+    {
+      select: EXCLUDE_FIELDS,
+      populate: USER_POPULATE,
+      lean: true,
+    }
+  );
 
   if (!updatedUser) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy người dùng");
@@ -189,7 +189,7 @@ const changePasswordService = async (
   }
 
   // Fetch user WITH password (we need it for comparison)
-  const user = await userModel.findById(targetUserId).select("+password");
+  const user = await userRepository.findById(targetUserId, { select: "+password" });
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy người dùng");
   }
@@ -214,7 +214,7 @@ const changePasswordService = async (
 // DELETE USER  (Soft delete — sets status to "inactive")
 // ---------------------------------------------------------------------------
 const deleteUserService = async (userId) => {
-  const user = await userModel.findById(userId);
+  const user = await userRepository.findById(userId);
 
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy người dùng");
@@ -245,7 +245,7 @@ const requestEmailChangeService = async (userId, data) => {
     throw new ApiError(StatusCodes.BAD_REQUEST, "Email không hợp lệ");
   }
 
-  const user = await userModel.findById(userId).select("+password");
+  const user = await userRepository.findById(userId, { select: "+password" });
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy người dùng");
   }
@@ -255,7 +255,7 @@ const requestEmailChangeService = async (userId, data) => {
   }
 
   // Check if new email is already taken by someone else
-  const emailExists = await userModel.findOne({ email: newEmail });
+  const emailExists = await userRepository.findOne({ email: newEmail });
   if (emailExists) {
     throw new ApiError(StatusCodes.CONFLICT, "Email này đã được sử dụng bởi người khác");
   }
@@ -310,7 +310,7 @@ const verifyEmailChangeService = async (userId, data) => {
     throw new ApiError(StatusCodes.BAD_REQUEST, "Vui lòng nhập mã OTP");
   }
 
-  const user = await userModel.findById(userId);
+  const user = await userRepository.findById(userId);
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy người dùng");
   }
@@ -349,18 +349,18 @@ const verifyEmailChangeService = async (userId, data) => {
 // ---------------------------------------------------------------------------
 const createLandlordService = async (userData) => {
   const { username, email, password } = userData;
-  const existingUser = await userModel.findOne({ email });
+  const existingUser = await userRepository.findOne({ email });
   if (existingUser) {
     throw new ApiError(StatusCodes.BAD_REQUEST, "Email đã được sử dụng");
   }
 
   // Lấy role landlord từ DB
-  let landlordRole = await roleModel.findOne({ name: "landlord" });
+  let landlordRole = await roleRepository.findOne({ name: "landlord" });
   if (!landlordRole) {
-    landlordRole = await roleModel.create({ name: "landlord", permissions: [] });
+    landlordRole = await roleRepository.create({ name: "landlord", permissions: [] });
   }
 
-  const newUser = await userModel.create({
+  const newUser = await userRepository.create({
     username,
     email,
     password,

@@ -1,6 +1,6 @@
 import { describe, it, afterEach, mock } from "node:test";
 import assert from "node:assert";
-import { userModel, roleModel, token } from "../src/models/index.js";
+import { userRepository, roleRepository, tokenRepository } from "../src/repositories/index.js";
 import { registerService, loginService, refreshTokenService, logoutService } from "../src/services/auth.service.js";
 import bcrypt from "bcrypt";
 import { jwt_utils } from "../src/utils/index.js";
@@ -13,7 +13,7 @@ describe("Auth Service Unit Tests", () => {
   describe("registerService", () => {
     it("should throw ApiError if email is already taken", async () => {
       // Giả lập email đã tồn tại
-      mock.method(userModel, "findOne", async () => {
+      mock.method(userRepository, "findOne", async () => {
         return { _id: "existing_user_id" };
       });
 
@@ -29,11 +29,11 @@ describe("Auth Service Unit Tests", () => {
 
     it("should successfully register a new user", async () => {
       // Giả lập email chưa tồn tại
-      mock.method(userModel, "findOne", async () => null);
+      mock.method(userRepository, "findOne", async () => null);
       // Giả lập tìm thấy role mặc định
-      mock.method(roleModel, "findOne", async () => ({ _id: "role_user_id" }));
+      mock.method(roleRepository, "findOne", async () => ({ _id: "role_user_id" }));
       // Giả lập tạo user mới thành công
-      mock.method(userModel, "create", async (data) => ({
+      mock.method(userRepository, "create", async (data) => ({
         _id: "new_user_id",
         username: data.username,
         email: data.email,
@@ -53,9 +53,7 @@ describe("Auth Service Unit Tests", () => {
 
   describe("loginService", () => {
     it("should throw ApiError if user email is not found", async () => {
-      mock.method(userModel, "findOne", () => ({
-        populate: () => null
-      }));
+      mock.method(userRepository, "findOne", () => null);
 
       await assert.rejects(
         loginService("wrong@example.com", "password", {}),
@@ -68,11 +66,9 @@ describe("Auth Service Unit Tests", () => {
     });
 
     it("should throw ApiError if password does not match", async () => {
-      mock.method(userModel, "findOne", () => ({
-        populate: () => ({
-          _id: "user_id",
-          password: "hashed_password",
-        })
+      mock.method(userRepository, "findOne", () => ({
+        _id: "user_id",
+        password: "hashed_password",
       }));
       mock.method(bcrypt, "compare", async () => false);
 
@@ -100,7 +96,7 @@ describe("Auth Service Unit Tests", () => {
     });
 
     it("should delete refresh token successfully", async () => {
-      mock.method(token, "deleteOne", async () => ({ deletedCount: 1 }));
+      mock.method(tokenRepository, "deleteOne", async () => ({ deletedCount: 1 }));
 
       const res = await logoutService("valid_token");
       assert.strictEqual(res.statusCode, 200);

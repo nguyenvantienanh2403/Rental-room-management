@@ -1,7 +1,7 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import mongoose from "mongoose";
-import { contractModel, invoiceModel, meterReadingModel } from "../src/models/index.js";
+import { contractRepository, invoiceRepository, meterReadingRepository } from "../src/repositories/index.js";
 import { createInvoiceService } from "../src/services/invoice.service.js";
 
 // Mock Mongoose session
@@ -23,20 +23,14 @@ describe("Invoice Service Unit Tests", () => {
 
   describe("createInvoiceService", () => {
     it("should throw ApiError if contract is not found", async () => {
-      // Mock invoiceModel.findOne to return null (no existing invoice for this month)
-      mock.method(invoiceModel, "findOne", () => ({
-        session: async () => null,
-      }));
+      // Mock invoiceRepository.findOne to return null (no existing invoice for this month)
+      mock.method(invoiceRepository, "findOne", async () => null);
 
-      // Mock meterReadingModel.findOne to return mock meter reading (passing reading check B1)
-      mock.method(meterReadingModel, "findOne", () => ({
-        session: async () => ({ _id: "reading_id" }),
-      }));
+      // Mock meterReadingRepository.findOne to return mock meter reading (passing reading check B1)
+      mock.method(meterReadingRepository, "findOne", async () => ({ _id: "reading_id" }));
 
-      // Mock contractModel.findById to return null (simulate contract not found)
-      mock.method(contractModel, "findById", () => ({
-        session: async () => null,
-      }));
+      // Mock contractRepository.findById to return null (simulate contract not found)
+      mock.method(contractRepository, "findById", async () => null);
 
       await assert.rejects(
         createInvoiceService({ contractId: "nonexistent_contract", month: 6, year: 2026 }),

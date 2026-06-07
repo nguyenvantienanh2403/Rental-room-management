@@ -60,6 +60,12 @@ const env = {
     username: process.env.EMAIL_USERNAME,
     password: process.env.EMAIL_PASSWORD,
   },
+  redis: {
+    url: process.env.REDIS_URL || null,
+  },
+  sentry: {
+    dsn: process.env.SENTRY_DSN || null,
+  },
 };
 
 export default env;

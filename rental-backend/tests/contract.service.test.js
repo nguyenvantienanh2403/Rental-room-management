@@ -1,7 +1,7 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import mongoose from "mongoose";
-import { roomModel, tenantModel } from "../src/models/index.js";
+import { roomRepository, tenantRepository } from "../src/repositories/index.js";
 import { createContractService } from "../src/services/contract.service.js";
 
 // Mock Mongoose session
@@ -23,9 +23,7 @@ describe("Contract Service Unit Tests", () => {
 
   describe("createContractService", () => {
     it("should throw ApiError if room is not found", async () => {
-      mock.method(roomModel, "findById", () => ({
-        session: async () => null,
-      }));
+      mock.method(roomRepository, "findById", async () => null);
 
       await assert.rejects(
         createContractService({ roomId: "nonexistent_room", tenantId: "tenant_id" }),
@@ -38,9 +36,7 @@ describe("Contract Service Unit Tests", () => {
     });
 
     it("should throw ApiError if room is not available", async () => {
-      mock.method(roomModel, "findById", () => ({
-        session: async () => ({ _id: "room_id", status: "rented" }),
-      }));
+      mock.method(roomRepository, "findById", async () => ({ _id: "room_id", status: "rented" }));
 
       await assert.rejects(
         createContractService({ roomId: "rented_room", tenantId: "tenant_id" }),
@@ -53,12 +49,8 @@ describe("Contract Service Unit Tests", () => {
     });
 
     it("should throw ApiError if tenant is not found", async () => {
-      mock.method(roomModel, "findById", () => ({
-        session: async () => ({ _id: "room_id", status: "available" }),
-      }));
-      mock.method(tenantModel, "findById", () => ({
-        session: async () => null,
-      }));
+      mock.method(roomRepository, "findById", async () => ({ _id: "room_id", status: "available" }));
+      mock.method(tenantRepository, "findById", async () => null);
 
       await assert.rejects(
         createContractService({ roomId: "available_room", tenantId: "nonexistent_tenant" }),

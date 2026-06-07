@@ -1,6 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 import { ApiError, response, escapeRegExp, checkIsAdmin } from "../utils/index.js";
-import { buildingModel } from "../models/index.js";
+import { buildingRepository } from "../repositories/index.js";
+import { getCache, setCache, deleteCache, deletePatternCache } from "../utils/cache.js";
 
 /**
  * Populate options cho building queries
@@ -16,15 +17,18 @@ const BUILDING_POPULATE = [
 // CREATE BUILDING
 // ---------------------------------------------------------------------------
 const createBuildingService = async (currentUser, buildingData) => {
-  const newBuilding = await buildingModel.create({
+  const newBuilding = await buildingRepository.create({
     ...buildingData,
     landlordId: currentUser._id,
   });
 
-  const building = await buildingModel
-    .findById(newBuilding._id)
-    .populate(BUILDING_POPULATE)
-    .lean();
+  const building = await buildingRepository.findById(newBuilding._id, {
+    populate: BUILDING_POPULATE,
+    lean: true,
+  });
+
+  // Invalidate cache
+  await deletePatternCache("buildings:list:*");
 
   return response(StatusCodes.CREATED, "Tạo tòa nhà thành công", building);
 };
@@ -42,6 +46,12 @@ const getAllBuildingsService = async (query = {}, currentUser) => {
     district,
     status = "active",
   } = query;
+
+  const cacheKey = `buildings:list:user:${currentUser?._id || "public"}:query:${JSON.stringify(query)}`;
+  const cachedData = await getCache(cacheKey);
+  if (cachedData) {
+    return response(StatusCodes.OK, "Lấy danh sách tòa nhà thành công", cachedData);
+  }
 
   const filter = {};
 
@@ -80,17 +90,17 @@ const getAllBuildingsService = async (query = {}, currentUser) => {
   const limitNum = parseInt(limit, 10);
 
   const [buildings, totalCount] = await Promise.all([
-    buildingModel
-      .find(filter)
-      .populate(BUILDING_POPULATE)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limitNum)
-      .lean(),
-    buildingModel.countDocuments(filter),
+    buildingRepository.find(filter, {
+      populate: BUILDING_POPULATE,
+      sort: { createdAt: -1 },
+      skip,
+      limit: limitNum,
+      lean: true,
+    }),
+    buildingRepository.countDocuments(filter),
   ]);
 
-  return response(StatusCodes.OK, "Lấy danh sách tòa nhà thành công", {
+  const resultData = {
     buildings,
     pagination: {
       page: parseInt(page, 10),
@@ -98,26 +108,46 @@ const getAllBuildingsService = async (query = {}, currentUser) => {
       totalCount,
       totalPages: Math.ceil(totalCount / limitNum),
     },
-  });
+  };
+
+  await setCache(cacheKey, resultData, 300); // Cache 5 minutes
+
+  return response(StatusCodes.OK, "Lấy danh sách tòa nhà thành công", resultData);
 };
 
 // ---------------------------------------------------------------------------
 // GET BUILDING BY SLUG OR ID
 // ---------------------------------------------------------------------------
 const getBuildingBySlugOrIdService = async (identifier, currentUser) => {
-  // Thử tìm theo slug trước, nếu không có thì tìm theo ID
-  let building = await buildingModel
-    .findOne({ slug: identifier })
-    .populate(BUILDING_POPULATE)
-    .lean();
+  const cacheKey = `buildings:detail:identifier:${identifier}`;
+  let building = await getCache(cacheKey);
 
   if (!building) {
-    // Kiểm tra xem identifier có phải ObjectId hợp lệ không
-    if (identifier.match(/^[0-9a-fA-F]{24}$/)) {
-      building = await buildingModel
-        .findById(identifier)
-        .populate(BUILDING_POPULATE)
-        .lean();
+    // Thử tìm theo slug trước, nếu không có thì tìm theo ID
+    building = await buildingRepository.findOne(
+      { slug: identifier },
+      { populate: BUILDING_POPULATE, lean: true }
+    );
+
+    if (!building) {
+      // Kiểm tra xem identifier có phải ObjectId hợp lệ không
+      if (identifier.match(/^[0-9a-fA-F]{24}$/)) {
+        building = await buildingRepository.findById(identifier, {
+          populate: BUILDING_POPULATE,
+          lean: true,
+        });
+      }
+    }
+
+    if (building) {
+      await setCache(cacheKey, building, 300);
+      // Cache cross reference
+      if (building.slug && building.slug !== identifier) {
+        await setCache(`buildings:detail:identifier:${building.slug}`, building, 300);
+      }
+      if (building._id && building._id.toString() !== identifier) {
+        await setCache(`buildings:detail:identifier:${building._id.toString()}`, building, 300);
+      }
     }
   }
 
@@ -144,7 +174,7 @@ const getBuildingBySlugOrIdService = async (identifier, currentUser) => {
 // UPDATE BUILDING
 // ---------------------------------------------------------------------------
 const updateBuildingService = async (currentUser, buildingId, updateData) => {
-  const building = await buildingModel.findById(buildingId);
+  const building = await buildingRepository.findById(buildingId);
 
   if (!building) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy tòa nhà");
@@ -184,14 +214,18 @@ const updateBuildingService = async (currentUser, buildingId, updateData) => {
     );
   }
 
-  const updatedBuilding = await buildingModel
-    .findByIdAndUpdate(
-      buildingId,
-      { $set: sanitizedData },
-      { returnDocument: "after", runValidators: true },
-    )
-    .populate(BUILDING_POPULATE)
-    .lean();
+  const updatedBuilding = await buildingRepository.findByIdAndUpdate(
+    buildingId,
+    { $set: sanitizedData },
+    { populate: BUILDING_POPULATE, lean: true }
+  );
+
+  // Invalidate cache
+  await deletePatternCache("buildings:list:*");
+  await deleteCache(`buildings:detail:identifier:${buildingId}`);
+  if (updatedBuilding && updatedBuilding.slug) {
+    await deleteCache(`buildings:detail:identifier:${updatedBuilding.slug}`);
+  }
 
   return response(
     StatusCodes.OK,
@@ -204,7 +238,7 @@ const updateBuildingService = async (currentUser, buildingId, updateData) => {
 // DELETE BUILDING  (Soft delete — status = "inactive")
 // ---------------------------------------------------------------------------
 const deleteBuildingService = async (currentUser, buildingId) => {
-  const building = await buildingModel.findById(buildingId);
+  const building = await buildingRepository.findById(buildingId);
 
   if (!building) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy tòa nhà");
@@ -227,6 +261,13 @@ const deleteBuildingService = async (currentUser, buildingId) => {
 
   building.status = "inactive";
   await building.save();
+
+  // Invalidate cache
+  await deletePatternCache("buildings:list:*");
+  await deleteCache(`buildings:detail:identifier:${buildingId}`);
+  if (building.slug) {
+    await deleteCache(`buildings:detail:identifier:${building.slug}`);
+  }
 
   return response(StatusCodes.OK, "Vô hiệu hóa tòa nhà thành công");
 };

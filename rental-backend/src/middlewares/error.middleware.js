@@ -1,5 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 import env from "../config/env.config.js";
+import sentryHelper from "../utils/sentry.js";
 
 /**
  * Global error handling middleware.
@@ -16,6 +17,20 @@ const errorMiddleware = (err, req, res, next) => {
     message: err.message,
     stack: err.stack,
   });
+
+  // Capture unexpected server errors (500+) in Sentry
+  if (statusCode >= 500) {
+    sentryHelper.captureException(err, {
+      extra: {
+        url: req.originalUrl,
+        method: req.method,
+        body: req.body,
+        params: req.params,
+        query: req.query,
+        user: req.user ? { id: req.user.id, role: req.user.role } : undefined,
+      },
+    });
+  }
 
   // Determine safe message to send to client
   let clientMessage;

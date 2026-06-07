@@ -16,17 +16,10 @@ const authMiddleware = catchAsync(async (req, res, next) => {
     }
     throw new ApiError(StatusCodes.UNAUTHORIZED, "Token không hợp lệ");
   }
-  const user = await userModel
-    .findById(decoded.id)
-    .select("-password")
-    .populate({
-      path: "role",
-      populate: { path: "permissions" },
-    });
-  if (!user) {
-    throw new ApiError(StatusCodes.UNAUTHORIZED, "Không tìm thấy người dùng");
-  }
-  req.user = user;
+  req.user = {
+    _id: decoded.id,
+    role: decoded.role,
+  };
   next();
 });
 

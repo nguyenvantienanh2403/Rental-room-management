@@ -10,8 +10,18 @@ import router from "./routes/index.js";
 import env from "./config/env.config.js";
 import startCronJobs from "./scripts/cronJobs.js";
 import mongoose from "mongoose";
+import { initRedis, getRedisClient } from "./config/redis.config.js";
+import * as Sentry from "@sentry/node";
 
 dotenv.config();
+
+// Initialize Sentry before app configuration if DSN is configured
+if (env.sentry?.dsn) {
+  Sentry.init({
+    dsn: env.sentry.dsn,
+    environment: env.server.nodeEnv,
+  });
+}
 
 // Structured logging for production environment
 if (env.server.nodeEnv === "production") {
@@ -103,9 +113,13 @@ app.use(errorHandler);
 const PORT = env.server.port;
 
 connectDB()
-  .then(() => {
+  .then(async () => {
     // DB is ready — safe to start cron jobs now
     startCronJobs();
+    
+    // Initialize Redis client
+    await initRedis();
+    
     const serverListener = app.listen(PORT, () => {
       console.log(`[SERVER] Running on port ${PORT} (${env.server.nodeEnv})`);
     });
@@ -115,11 +129,18 @@ connectDB()
       serverListener.close(async () => {
         console.log("[SERVER] HTTP server closed.");
         try {
+          // Close Redis connection
+          const redisClient = getRedisClient();
+          if (redisClient) {
+            await redisClient.quit();
+            console.log("[SERVER] Redis connection closed.");
+          }
+
           await mongoose.connection.close();
           console.log("[SERVER] Database connection closed.");
           process.exit(0);
         } catch (err) {
-          console.error("[SERVER] Error closing database connection", err);
+          console.error("[SERVER] Error during shutdown:", err.message);
           process.exit(1);
         }
       });

@@ -1,6 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 import { response, checkIsAdmin } from "../utils/index.js";
-import { buildingModel, roomModel, invoiceModel, contractModel } from "../models/index.js";
+import { buildingRepository, roomRepository, invoiceRepository, contractRepository } from "../repositories/index.js";
 
 const getOverviewService = async (currentUser) => {
   const today = new Date();
@@ -26,19 +26,19 @@ const getOverviewService = async (currentUser) => {
 
   if (currentUser && !checkIsAdmin(currentUser)) {
     // 1. Tìm các ID Tòa nhà của Landlord
-    const buildings = await buildingModel.find({ landlordId: currentUser._id }).select('_id').lean();
+    const buildings = await buildingRepository.find({ landlordId: currentUser._id }, { select: '_id', lean: true });
     const buildingIds = buildings.map(b => b._id);
     
     roomFilter.buildingId = { $in: buildingIds };
     
     // 2. Tìm các ID Phòng thuộc các Tòa nhà trên
-    const rooms = await roomModel.find({ buildingId: { $in: buildingIds } }).select('_id').lean();
+    const rooms = await roomRepository.find({ buildingId: { $in: buildingIds } }, { select: '_id', lean: true });
     const roomIds = rooms.map(r => r._id);
     
     contractFilter.roomId = { $in: roomIds };
     
     // 3. Tìm các ID Hợp đồng thuộc các Phòng trên
-    const contracts = await contractModel.find({ roomId: { $in: roomIds } }).select('_id').lean();
+    const contracts = await contractRepository.find({ roomId: { $in: roomIds } }, { select: '_id', lean: true });
     const contractIds = contracts.map(c => c._id);
     
     invoiceFilter.contractId = { $in: contractIds };
@@ -46,8 +46,8 @@ const getOverviewService = async (currentUser) => {
 
   // 1. Room Statistics
   const roomStatsPromise = Promise.all([
-    roomModel.countDocuments(roomFilter),
-    roomModel.countDocuments({ ...roomFilter, status: "rented" })
+    roomRepository.countDocuments(roomFilter),
+    roomRepository.countDocuments({ ...roomFilter, status: "rented" })
   ]).then(([total, rented]) => {
     const available = total - rented;
     const occupancyRate = total > 0 ? ((rented / total) * 100).toFixed(2) : 0;
@@ -60,18 +60,18 @@ const getOverviewService = async (currentUser) => {
   });
 
   // 2. Current Month Revenue
-  const currentMonthRevenuePromise = invoiceModel.aggregate([
+  const currentMonthRevenuePromise = invoiceRepository.aggregate([
     { $match: { ...invoiceFilter, month: currentMonth, year: currentYear, status: "paid" } },
     { $group: { _id: null, total: { $sum: "$totalAmount" } } }
   ]).then(res => res[0]?.total || 0);
 
-  const previousMonthRevenuePromise = invoiceModel.aggregate([
+  const previousMonthRevenuePromise = invoiceRepository.aggregate([
     { $match: { ...invoiceFilter, month: previousMonth, year: previousYear, status: "paid" } },
     { $group: { _id: null, total: { $sum: "$totalAmount" } } }
   ]).then(res => res[0]?.total || 0);
 
   // 3. Total Debt
-  const totalDebtPromise = invoiceModel.aggregate([
+  const totalDebtPromise = invoiceRepository.aggregate([
     { $match: { ...invoiceFilter, status: "issued" } },
     { $group: { _id: null, count: { $sum: 1 }, total: { $sum: "$totalAmount" } } }
   ]).then(res => ({
@@ -91,7 +91,7 @@ const getOverviewService = async (currentUser) => {
     last6Months.push({ month: m, year: y });
   }
 
-  const revenueChartPromise = invoiceModel.aggregate([
+  const revenueChartPromise = invoiceRepository.aggregate([
     {
       $match: {
         ...invoiceFilter,
@@ -117,22 +117,23 @@ const getOverviewService = async (currentUser) => {
   });
 
   // 5. Overdue Invoices
-  const overdueInvoicesPromise = invoiceModel.find({
+  const overdueInvoicesPromise = invoiceRepository.find({
     ...invoiceFilter,
     status: "issued",
     dueDate: { $lt: today }
-  })
-    .sort({ dueDate: 1 })
-    .limit(10)
-    .populate({
+  }, {
+    sort: { dueDate: 1 },
+    limit: 10,
+    populate: {
       path: "contractId",
       select: "contractCode roomId tenantId",
       populate: [
         { path: "roomId", select: "name" },
         { path: "tenantId", select: "fullName phoneNumber" }
       ]
-    })
-    .lean()
+    },
+    lean: true
+  })
     .then(invoices => {
       return invoices.map(inv => {
         const diffTime = Math.abs(today - new Date(inv.dueDate));
@@ -149,16 +150,19 @@ const getOverviewService = async (currentUser) => {
   expiringDateLimit.setDate(today.getDate() + 30);
   expiringDateLimit.setHours(23, 59, 59, 999);
 
-  const expiringContractsPromise = contractModel.find({
+  const expiringContractsPromise = contractRepository.find({
     ...contractFilter,
     status: "active",
     endDate: { $gte: today, $lte: expiringDateLimit }
-  })
-    .sort({ endDate: 1 })
-    .limit(10)
-    .populate("roomId", "name")
-    .populate("tenantId", "fullName phoneNumber")
-    .lean();
+  }, {
+    sort: { endDate: 1 },
+    limit: 10,
+    populate: [
+      { path: "roomId", select: "name" },
+      { path: "tenantId", select: "fullName phoneNumber" }
+    ],
+    lean: true
+  });
 
   // Run all promises concurrently
   const [

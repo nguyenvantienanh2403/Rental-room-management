@@ -1,7 +1,8 @@
 import { StatusCodes } from "http-status-codes";
 import { ApiError, response, checkIsAdmin } from "../utils/index.js";
-import { roomModel, buildingModel } from "../models/index.js";
+import { roomRepository, buildingRepository } from "../repositories/index.js";
 import { uploadToCloudinary } from "./upload.service.js";
+import { getCache, setCache, deleteCache, deletePatternCache } from "../utils/cache.js";
 
 const ROOM_POPULATE = [
   {
@@ -17,14 +18,14 @@ const ROOM_POPULATE = [
 
 // Hàm tiện ích: Lấy tất cả ID tòa nhà của một Landlord
 const getLandlordBuildingIds = async (landlordId) => {
-  const buildings = await buildingModel.find({ landlordId }).select('_id').lean();
+  const buildings = await buildingRepository.find({ landlordId }, { select: '_id', lean: true });
   return buildings.map(b => b._id);
 };
 
 // Hàm tiện ích: Kiểm tra quyền sở hữu tòa nhà
 const verifyBuildingOwnership = async (buildingId, currentUser) => {
   if (checkIsAdmin(currentUser)) return true;
-  const building = await buildingModel.findById(buildingId).select('landlordId').lean();
+  const building = await buildingRepository.findById(buildingId, { select: 'landlordId', lean: true });
   if (!building) throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy tòa nhà");
   if (building.landlordId.toString() !== currentUser._id.toString()) {
     throw new ApiError(StatusCodes.FORBIDDEN, "Bạn không có quyền thao tác trên tòa nhà này");
@@ -39,12 +40,17 @@ const createRoomService = async (roomData, currentUser) => {
   // Check ownership of building
   await verifyBuildingOwnership(roomData.buildingId, currentUser);
 
-  const newRoom = await roomModel.create(roomData);
+  const newRoom = await roomRepository.create(roomData);
 
-  const room = await roomModel
-    .findById(newRoom._id)
-    .populate(ROOM_POPULATE)
-    .lean();
+  const room = await roomRepository.findById(newRoom._id, {
+    populate: ROOM_POPULATE,
+    lean: true,
+  });
+
+  // Invalidate cache
+  await deletePatternCache(`rooms:list:building:${roomData.buildingId}:*`);
+  await deletePatternCache("rooms:all:*");
+  await deletePatternCache("rooms:public:*");
 
   return response(StatusCodes.CREATED, "Tạo phòng thành công", room);
 };
@@ -55,6 +61,12 @@ const createRoomService = async (roomData, currentUser) => {
 const getRoomsByBuildingService = async (buildingId, queryOptions = {}, currentUser) => {
   // Kiểm tra quyền xem building này
   await verifyBuildingOwnership(buildingId, currentUser);
+
+  const cacheKey = `rooms:list:building:${buildingId}:query:${JSON.stringify(queryOptions)}`;
+  const cachedData = await getCache(cacheKey);
+  if (cachedData) {
+    return response(StatusCodes.OK, "Lấy danh sách phòng thành công", cachedData);
+  }
 
   const { page = 1, limit = 10, status } = queryOptions;
   const filter = { buildingId };
@@ -67,17 +79,17 @@ const getRoomsByBuildingService = async (buildingId, queryOptions = {}, currentU
   const limitNum = parseInt(limit, 10);
 
   const [rooms, totalCount] = await Promise.all([
-    roomModel
-      .find(filter)
-      .populate(ROOM_POPULATE)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limitNum)
-      .lean(),
-    roomModel.countDocuments(filter),
+    roomRepository.find(filter, {
+      populate: ROOM_POPULATE,
+      sort: { createdAt: -1 },
+      skip,
+      limit: limitNum,
+      lean: true,
+    }),
+    roomRepository.countDocuments(filter),
   ]);
 
-  return response(StatusCodes.OK, "Lấy danh sách phòng thành công", {
+  const resultData = {
     rooms,
     pagination: {
       page: parseInt(page, 10),
@@ -85,13 +97,23 @@ const getRoomsByBuildingService = async (buildingId, queryOptions = {}, currentU
       totalCount,
       totalPages: Math.ceil(totalCount / limitNum),
     },
-  });
+  };
+
+  await setCache(cacheKey, resultData, 300); // Cache 5 minutes
+
+  return response(StatusCodes.OK, "Lấy danh sách phòng thành công", resultData);
 };
 
 // ---------------------------------------------------------------------------
 // GET PUBLIC ROOMS (Marketplace)
 // ---------------------------------------------------------------------------
 const getPublicRoomsService = async (queryOptions = {}) => {
+  const cacheKey = `rooms:public:query:${JSON.stringify(queryOptions)}`;
+  const cachedData = await getCache(cacheKey);
+  if (cachedData) {
+    return response(StatusCodes.OK, "Lấy danh sách phòng trống thành công", cachedData);
+  }
+
   const { page = 1, limit = 10 } = queryOptions;
   const filter = { status: "available" }; // Luôn luôn chỉ lấy phòng trống
 
@@ -99,17 +121,17 @@ const getPublicRoomsService = async (queryOptions = {}) => {
   const limitNum = parseInt(limit, 10);
 
   const [rooms, totalCount] = await Promise.all([
-    roomModel
-      .find(filter)
-      .populate(ROOM_POPULATE)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limitNum)
-      .lean(),
-    roomModel.countDocuments(filter),
+    roomRepository.find(filter, {
+      populate: ROOM_POPULATE,
+      sort: { createdAt: -1 },
+      skip,
+      limit: limitNum,
+      lean: true,
+    }),
+    roomRepository.countDocuments(filter),
   ]);
 
-  return response(StatusCodes.OK, "Lấy danh sách phòng trống thành công", {
+  const resultData = {
     rooms,
     pagination: {
       page: parseInt(page, 10),
@@ -117,13 +139,23 @@ const getPublicRoomsService = async (queryOptions = {}) => {
       totalCount,
       totalPages: Math.ceil(totalCount / limitNum),
     },
-  });
+  };
+
+  await setCache(cacheKey, resultData, 300); // Cache 5 minutes
+
+  return response(StatusCodes.OK, "Lấy danh sách phòng trống thành công", resultData);
 };
 
 // ---------------------------------------------------------------------------
 // GET ALL ROOMS (Xử lý Data Ownership toàn cục)
 // ---------------------------------------------------------------------------
 const getAllRoomsService = async (queryOptions = {}, currentUser) => {
+  const cacheKey = `rooms:all:user:${currentUser?._id || "public"}:query:${JSON.stringify(queryOptions)}`;
+  const cachedData = await getCache(cacheKey);
+  if (cachedData) {
+    return response(StatusCodes.OK, "Lấy danh sách tất cả phòng thành công", cachedData);
+  }
+
   const { page = 1, limit = 10, status } = queryOptions;
   const filter = {};
 
@@ -141,17 +173,17 @@ const getAllRoomsService = async (queryOptions = {}, currentUser) => {
   const limitNum = parseInt(limit, 10);
 
   const [rooms, totalCount] = await Promise.all([
-    roomModel
-      .find(filter)
-      .populate(ROOM_POPULATE)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limitNum)
-      .lean(),
-    roomModel.countDocuments(filter),
+    roomRepository.find(filter, {
+      populate: ROOM_POPULATE,
+      sort: { createdAt: -1 },
+      skip,
+      limit: limitNum,
+      lean: true,
+    }),
+    roomRepository.countDocuments(filter),
   ]);
 
-  return response(StatusCodes.OK, "Lấy danh sách tất cả phòng thành công", {
+  const resultData = {
     rooms,
     pagination: {
       page: parseInt(page, 10),
@@ -159,14 +191,31 @@ const getAllRoomsService = async (queryOptions = {}, currentUser) => {
       totalCount,
       totalPages: Math.ceil(totalCount / limitNum),
     },
-  });
+  };
+
+  await setCache(cacheKey, resultData, 300); // Cache 5 minutes
+
+  return response(StatusCodes.OK, "Lấy danh sách tất cả phòng thành công", resultData);
 };
 
 // ---------------------------------------------------------------------------
 // GET ROOM BY SLUG
 // ---------------------------------------------------------------------------
 const getRoomBySlugService = async (slug, currentUser) => {
-  const room = await roomModel.findOne({ slug }).populate(ROOM_POPULATE).lean();
+  const cacheKey = `rooms:detail:slug:${slug}`;
+  let room = await getCache(cacheKey);
+
+  if (!room) {
+    room = await roomRepository.findOne({ slug }, { populate: ROOM_POPULATE, lean: true });
+
+    if (room) {
+      await setCache(cacheKey, room, 300);
+      // Cache cross reference by _id
+      if (room._id) {
+        await setCache(`rooms:detail:id:${room._id.toString()}`, room, 300);
+      }
+    }
+  }
 
   if (!room) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy phòng");
@@ -182,7 +231,7 @@ const getRoomBySlugService = async (slug, currentUser) => {
 // UPDATE ROOM
 // ---------------------------------------------------------------------------
 const updateRoomService = async (roomId, updateData, currentUser) => {
-  const room = await roomModel.findById(roomId);
+  const room = await roomRepository.findById(roomId);
 
   if (!room) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy phòng");
@@ -214,14 +263,23 @@ const updateRoomService = async (roomId, updateData, currentUser) => {
     );
   }
 
-  const updatedRoom = await roomModel
-    .findByIdAndUpdate(
-      roomId,
-      { $set: sanitizedData },
-      { returnDocument: "after", runValidators: true },
-    )
-    .populate(ROOM_POPULATE)
-    .lean();
+  const updatedRoom = await roomRepository.findByIdAndUpdate(
+    roomId,
+    { $set: sanitizedData },
+    { populate: ROOM_POPULATE, lean: true }
+  );
+
+  // Invalidate cache
+  await deletePatternCache(`rooms:list:building:${room.buildingId}:*`);
+  await deletePatternCache("rooms:all:*");
+  await deletePatternCache("rooms:public:*");
+  await deleteCache(`rooms:detail:id:${roomId}`);
+  if (room.slug) {
+    await deleteCache(`rooms:detail:slug:${room.slug}`);
+  }
+  if (updatedRoom && updatedRoom.slug && updatedRoom.slug !== room.slug) {
+    await deleteCache(`rooms:detail:slug:${updatedRoom.slug}`);
+  }
 
   return response(StatusCodes.OK, "Cập nhật phòng thành công", updatedRoom);
 };
@@ -230,7 +288,7 @@ const updateRoomService = async (roomId, updateData, currentUser) => {
 // DELETE ROOM
 // ---------------------------------------------------------------------------
 const deleteRoomService = async (roomId, currentUser) => {
-  const room = await roomModel.findById(roomId);
+  const room = await roomRepository.findById(roomId);
 
   if (!room) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Không tìm thấy phòng");
@@ -239,7 +297,16 @@ const deleteRoomService = async (roomId, currentUser) => {
   // Check ownership
   await verifyBuildingOwnership(room.buildingId, currentUser);
 
-  await roomModel.findByIdAndDelete(roomId);
+  await roomRepository.findByIdAndDelete(roomId);
+
+  // Invalidate cache
+  await deletePatternCache(`rooms:list:building:${room.buildingId}:*`);
+  await deletePatternCache("rooms:all:*");
+  await deletePatternCache("rooms:public:*");
+  await deleteCache(`rooms:detail:id:${roomId}`);
+  if (room.slug) {
+    await deleteCache(`rooms:detail:slug:${room.slug}`);
+  }
 
   return response(StatusCodes.OK, "Xóa phòng thành công");
 };

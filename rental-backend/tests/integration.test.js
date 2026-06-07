@@ -3,6 +3,8 @@ import assert from "node:assert";
 import express from "express";
 import router from "../src/routes/index.js";
 import errorHandler from "../src/middlewares/error.middleware.js";
+import sentryHelper from "../src/utils/sentry.js";
+import env from "../src/config/env.config.js";
 
 describe("API Integration Tests", () => {
   let server;
@@ -81,6 +83,64 @@ describe("API Integration Tests", () => {
       const body = await res.json();
       assert.strictEqual(res.status, 401);
       assert.strictEqual(body.message, "Không tìm thấy token");
+    });
+  });
+
+  describe("Error Middleware Sentry Integration", () => {
+    it("should capture 500 errors and send them to Sentry", async () => {
+      const captureExceptionMock = mock.fn();
+      mock.method(sentryHelper, "captureException", captureExceptionMock);
+
+      const oldDsn = env.sentry.dsn;
+      env.sentry.dsn = "https://mock-dsn@sentry.io/123";
+
+      const app = express();
+      app.get("/error-test", (req, res, next) => {
+        next(new Error("Lỗi giả lập 500"));
+      });
+      app.use(errorHandler);
+
+      const serverTest = app.listen(0);
+      const port = serverTest.address().port;
+
+      const res = await fetch(`http://localhost:${port}/error-test`);
+      const body = await res.json();
+
+      assert.strictEqual(res.status, 500);
+      assert.strictEqual(body.statusCode, 500);
+      assert.strictEqual(captureExceptionMock.mock.callCount(), 1);
+
+      serverTest.close();
+      env.sentry.dsn = oldDsn;
+    });
+
+    it("should not capture operational errors (status code < 500) in Sentry", async () => {
+      const captureExceptionMock = mock.fn();
+      mock.method(sentryHelper, "captureException", captureExceptionMock);
+
+      const oldDsn = env.sentry.dsn;
+      env.sentry.dsn = "https://mock-dsn@sentry.io/123";
+
+      const app = express();
+      app.get("/error-test-400", (req, res, next) => {
+        const err = new Error("Lỗi tham số đầu vào");
+        err.statusCode = 400;
+        next(err);
+      });
+      app.use(errorHandler);
+
+      const serverTest = app.listen(0);
+      const port = serverTest.address().port;
+
+      const res = await fetch(`http://localhost:${port}/error-test-400`);
+      const body = await res.json();
+
+      assert.strictEqual(res.status, 400);
+      assert.strictEqual(body.statusCode, 400);
+      assert.strictEqual(captureExceptionMock.mock.callCount(), 0);
+
+      serverTest.close();
+      env.sentry.dsn = oldDsn;
     });
   });
 });
