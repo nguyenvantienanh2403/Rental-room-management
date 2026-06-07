@@ -11,10 +11,23 @@ const initRedis = async () => {
 
   redisClient = createClient({
     url: env.redis.url,
+    disableOfflineQueue: true,
+    socket: {
+      connectTimeout: 5000,
+      reconnectStrategy: (retries) => {
+        if (retries > 5) {
+          console.warn("[REDIS] Đã đạt giới hạn 5 lần thử kết nối lại. Vô hiệu hóa Redis caching.");
+          return false;
+        }
+        return Math.min(retries * 1000, 3000);
+      },
+    },
   });
 
   redisClient.on("error", (err) => {
-    console.error("[REDIS ERROR]", err.message);
+    if (redisClient && redisClient.isOpen) {
+      console.error("[REDIS ERROR]", err.message || err.code || err);
+    }
   });
 
   redisClient.on("connect", () => {
@@ -35,6 +48,11 @@ const initRedis = async () => {
   }
 };
 
-const getRedisClient = () => redisClient;
+const getRedisClient = () => {
+  if (redisClient && redisClient.isReady) {
+    return redisClient;
+  }
+  return null;
+};
 
 export { initRedis, getRedisClient };

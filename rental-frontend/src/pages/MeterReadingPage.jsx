@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Search, Loader2, Filter, Plus, FileText, Zap, Droplets } from "lucide-react";
+import { Pagination } from "../components/ui/Pagination";
 import { meterReadingService } from "../services/meterReading.service";
 import { contractService } from "../services/contract.service";
 import { invoiceService } from "../services/invoice.service";
@@ -20,6 +21,10 @@ export function MeterReadingPage() {
   
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMonthFilter, setSelectedMonthFilter] = useState("all");
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalReadingsCount, setTotalReadingsCount] = useState(0);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
@@ -43,46 +48,84 @@ export function MeterReadingPage() {
 
   const navigate = useNavigate();
 
-  const fetchData = useCallback(async () => {
+  // Fetch static dependencies once
+  useEffect(() => {
+    const fetchDependencies = async () => {
+      try {
+        const [contractsRes, buildingsRes] = await Promise.all([
+          contractService.getAll({ limit: 1000 }),
+          buildingService.getAll({ limit: 1000 })
+        ]);
+        const contractList = Array.isArray(contractsRes) ? contractsRes : (contractsRes?.data?.contracts || contractsRes?.data || []);
+        const buildingList = Array.isArray(buildingsRes) ? buildingsRes : (buildingsRes?.data?.buildings || buildingsRes?.data || []);
+        setBuildings(buildingList);
+        
+        // Gắn thông tin Tòa nhà vào hợp đồng
+        const enhancedContracts = contractList.map(c => {
+          const bId = c.roomId?.buildingId?._id || c.roomId?.buildingId;
+          const b = buildingList.find(b => b._id === bId);
+          return { ...c, buildingName: b?.name || 'Tòa nhà' };
+        });
+        setContracts(enhancedContracts);
+      } catch (error) {
+        toast.error("Không thể tải dữ liệu phụ trợ");
+      }
+    };
+    fetchDependencies();
+  }, []);
+
+  const fetchData = useCallback(async (page = 1) => {
     setIsLoading(true);
     try {
-      const [readingsRes, contractsRes, buildingsRes] = await Promise.all([
-        meterReadingService.getAll(),
-        contractService.getAll(),
-        buildingService.getAll()
-      ]);
-      
-      const contractList = Array.isArray(contractsRes) ? contractsRes : (contractsRes?.data?.contracts || contractsRes?.data || []);
-      const buildingList = Array.isArray(buildingsRes) ? buildingsRes : (buildingsRes?.data?.buildings || buildingsRes?.data || []);
-      setBuildings(buildingList);
-      
-      // Gắn thông tin Tòa nhà vào hợp đồng
-      const enhancedContracts = contractList.map(c => {
-        const bId = c.roomId?.buildingId?._id || c.roomId?.buildingId;
-        const b = buildingList.find(b => b._id === bId);
-        return { ...c, buildingName: b?.name || 'Tòa nhà' };
-      });
-      setContracts(enhancedContracts);
+      const params = { page, limit: 10, search: searchTerm };
+      if (selectedMonthFilter !== "all") params.month = selectedMonthFilter;
 
-      let list = Array.isArray(readingsRes) ? readingsRes : (readingsRes?.data?.readings || readingsRes?.data || []);
+      const readingsRes = await meterReadingService.getAll(params);
       
-      // Map contract data into readings for display
+      let list = [];
+      let totalP = 1;
+      let currP = 1;
+      let totalCount = 0;
+      
+      if (readingsRes && readingsRes.data) {
+        list = readingsRes.data.readings || [];
+        currP = readingsRes.data.pagination?.page || 1;
+        totalP = readingsRes.data.pagination?.totalPages || 1;
+        totalCount = readingsRes.data.pagination?.totalCount || list.length;
+      } else if (readingsRes && readingsRes.readings) {
+        list = readingsRes.readings || [];
+        currP = readingsRes.pagination?.page || 1;
+        totalP = readingsRes.pagination?.totalPages || 1;
+        totalCount = readingsRes.pagination?.totalCount || list.length;
+      } else if (Array.isArray(readingsRes)) {
+        list = readingsRes;
+        totalCount = readingsRes.length;
+      }
+      
+      // Map contract data into readings for display (contracts must be loaded)
       const mappedList = list.map(r => {
-        const c = contractList.find(contract => contract._id === r.contractId);
+        const c = contracts.find(contract => contract._id === r.contractId);
         return { ...r, contractData: c };
       });
       
       setReadings(mappedList);
+      setCurrentPage(currP);
+      setTotalPages(totalP);
+      setTotalReadingsCount(totalCount);
     } catch (error) {
       toast.error("Không thể tải dữ liệu điện nước");
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [contracts, selectedMonthFilter, searchTerm]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    const delayDebounce = setTimeout(() => {
+      fetchData(currentPage);
+    }, 300);
+
+    return () => clearTimeout(delayDebounce);
+  }, [currentPage, selectedMonthFilter, searchTerm, fetchData]);
 
   const handleAddNew = () => {
     setSelectedReading(null);
@@ -232,20 +275,7 @@ export function MeterReadingPage() {
     }
   };
 
-  // Lọc dữ liệu
-  const filteredReadings = useMemo(() => {
-    return readings.filter(r => {
-      const term = searchTerm.toLowerCase();
-      const tenantName = (r.contractData?.tenantId?.fullName || '').toLowerCase();
-      const contractCode = (r.contractData?.contractCode || '').toLowerCase();
-      const roomName = (r.contractData?.roomId?.name || '').toLowerCase();
-      
-      const matchSearch = tenantName.includes(term) || contractCode.includes(term) || roomName.includes(term);
-      const matchMonth = selectedMonthFilter === "all" || r.month.toString() === selectedMonthFilter;
-      
-      return matchSearch && matchMonth;
-    });
-  }, [readings, searchTerm, selectedMonthFilter]);
+  // Filtering is done server-side now
 
   return (
     <div className="space-y-6 pb-20">
@@ -274,7 +304,10 @@ export function MeterReadingPage() {
             placeholder="Tên khách, Mã HĐ, Phòng..."
             className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary text-sm"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
           />
         </div>
         
@@ -283,7 +316,10 @@ export function MeterReadingPage() {
           <select
             className="block w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary text-sm font-medium"
             value={selectedMonthFilter}
-            onChange={(e) => setSelectedMonthFilter(e.target.value)}
+            onChange={(e) => {
+              setSelectedMonthFilter(e.target.value);
+              setCurrentPage(1);
+            }}
           >
             <option value="all">Tất cả các tháng</option>
             <option value="1">Tháng 1</option>
@@ -305,12 +341,21 @@ export function MeterReadingPage() {
       {isLoading ? (
         <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
       ) : (
-        <MeterReadingTable 
-          readings={filteredReadings} 
-          onEdit={handleEditClick} 
-          onDelete={handleDeleteClick}
-          onCreateInvoice={handleCreateInvoiceClick}
-        />
+        <>
+          <MeterReadingTable 
+            readings={readings} 
+            onEdit={handleEditClick} 
+            onDelete={handleDeleteClick} 
+            onCreateInvoice={handleCreateInvoiceClick}
+          />
+          {readings.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={(page) => setCurrentPage(page)}
+            />
+          )}
+        </>
       )}
 
       {/* CREATE / EDIT MODAL */}

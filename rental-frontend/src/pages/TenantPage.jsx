@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Plus, Search, Loader2, Trash2, Filter, User, MapPin, Building, Phone, DoorOpen } from "lucide-react";
+import { Pagination } from "../components/ui/Pagination";
 import { tenantService } from "../services/tenant.service";
 import { roomService } from "../services/room.service";
 import { TenantTable } from "../features/tenant/TenantTable";
@@ -13,6 +14,9 @@ export function TenantPage() {
   const [rooms, setRooms] = useState([]);
   const [isLoadingTenants, setIsLoadingTenants] = useState(true);
   const [isLoadingRooms, setIsLoadingRooms] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalTenantsCount, setTotalTenantsCount] = useState(0);
   
   // Filter States
   const [searchTerm, setSearchTerm] = useState("");
@@ -55,33 +59,54 @@ export function TenantPage() {
     fetchRooms();
   }, []);
 
-  const fetchTenants = useCallback(async () => {
+  const fetchTenants = useCallback(async (page = 1) => {
     setIsLoadingTenants(true);
     try {
-      let response;
-      if (selectedRoomFilter === "all") {
-        response = await tenantService.getAll();
-      } else {
-        response = await tenantService.getByRoom(selectedRoomFilter);
-      }
+      const response = await tenantService.getAll({
+        page,
+        limit: 10,
+        search: searchTerm,
+        roomId: selectedRoomFilter
+      });
       
       let list = [];
-      if (Array.isArray(response)) list = response;
-      else if (response && Array.isArray(response.data)) list = response.data;
-      else if (response && Array.isArray(response.tenants)) list = response.tenants;
-      else if (response && response.data && Array.isArray(response.data.tenants)) list = response.data.tenants;
+      let totalP = 1;
+      let currP = 1;
+      let totalCount = 0;
+      
+      if (response && response.data) {
+        list = response.data.tenants || [];
+        currP = response.data.pagination?.page || 1;
+        totalP = response.data.pagination?.totalPages || 1;
+        totalCount = response.data.pagination?.totalCount || list.length;
+      } else if (response && response.tenants) {
+        list = response.tenants || [];
+        currP = response.pagination?.page || 1;
+        totalP = response.pagination?.totalPages || 1;
+        totalCount = response.pagination?.totalCount || list.length;
+      } else if (Array.isArray(response)) {
+        list = response;
+        totalCount = response.length;
+      }
       
       setTenants(list);
+      setCurrentPage(currP);
+      setTotalPages(totalP);
+      setTotalTenantsCount(totalCount);
     } catch (error) {
       toast.error("Không thể tải danh sách khách thuê");
     } finally {
       setIsLoadingTenants(false);
     }
-  }, [selectedRoomFilter]);
+  }, [selectedRoomFilter, searchTerm]);
 
   useEffect(() => {
-    fetchTenants();
-  }, [fetchTenants]);
+    const delayDebounce = setTimeout(() => {
+      fetchTenants(currentPage);
+    }, 300);
+
+    return () => clearTimeout(delayDebounce);
+  }, [currentPage, selectedRoomFilter, searchTerm, fetchTenants]);
 
   // Group rooms by building for Select dropdowns
   const groupedRooms = useMemo(() => {
@@ -177,15 +202,7 @@ export function TenantPage() {
     }
   };
 
-  // Filter Data locally by Search term
-  const filteredTenants = useMemo(() => {
-    return tenants.filter(tenant => {
-      const term = searchTerm.toLowerCase();
-      return (tenant.fullName || '').toLowerCase().includes(term) || 
-             (tenant.identityCard || '').includes(searchTerm) ||
-             (tenant.phoneNumber || '').includes(searchTerm);
-    });
-  }, [tenants, searchTerm]);
+  // Search and filter is done server-side now
 
   return (
     <div className="space-y-6">
@@ -212,7 +229,10 @@ export function TenantPage() {
               placeholder="Tên, SĐT, CCCD..."
               className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg bg-slate-50 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm transition-colors"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
             />
           </div>
 
@@ -224,7 +244,10 @@ export function TenantPage() {
             <select
               className="block w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm font-medium text-slate-700 transition-colors"
               value={selectedRoomFilter}
-              onChange={(e) => setSelectedRoomFilter(e.target.value)}
+              onChange={(e) => {
+                setSelectedRoomFilter(e.target.value);
+                setCurrentPage(1);
+              }}
               disabled={isLoadingRooms}
             >
               <option value="all">-- Tất cả Phòng --</option>
@@ -240,7 +263,7 @@ export function TenantPage() {
         </div>
 
         <div className="text-sm text-slate-500 font-medium bg-slate-50 px-4 py-2 rounded-lg border border-slate-100 whitespace-nowrap">
-          Tổng số: <strong className="text-slate-900 text-base">{filteredTenants.length}</strong> khách
+          Tổng số: <strong className="text-slate-900 text-base">{totalTenantsCount}</strong> khách
         </div>
       </div>
 
@@ -248,10 +271,18 @@ export function TenantPage() {
         <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
       ) : (
         <TenantTable 
-          tenants={filteredTenants} 
+          tenants={tenants} 
           onEdit={handleEditClick} 
           onView={handleViewClick} 
           onDelete={handleDeleteClick} 
+        />
+      )}
+
+      {tenants.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={(page) => setCurrentPage(page)}
         />
       )}
 

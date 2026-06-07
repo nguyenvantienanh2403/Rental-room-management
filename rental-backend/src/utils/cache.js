@@ -8,7 +8,7 @@ import { getRedisClient } from "../config/redis.config.js";
 const getCache = async (key) => {
   try {
     const client = getRedisClient();
-    if (!client || !client.isOpen) return null;
+    if (!client || !client.isReady) return null;
     const data = await client.get(key);
     return data ? JSON.parse(data) : null;
   } catch (error) {
@@ -26,7 +26,7 @@ const getCache = async (key) => {
 const setCache = async (key, value, ttlSeconds = 300) => {
   try {
     const client = getRedisClient();
-    if (!client || !client.isOpen) return;
+    if (!client || !client.isReady) return;
     await client.set(key, JSON.stringify(value), {
       EX: ttlSeconds,
     });
@@ -42,7 +42,7 @@ const setCache = async (key, value, ttlSeconds = 300) => {
 const deleteCache = async (key) => {
   try {
     const client = getRedisClient();
-    if (!client || !client.isOpen) return;
+    if (!client || !client.isReady) return;
     await client.del(key);
   } catch (error) {
     console.warn(`[CACHE WARNING] Failed to DEL key "${key}":`, error.message);
@@ -56,20 +56,19 @@ const deleteCache = async (key) => {
 const deletePatternCache = async (pattern) => {
   try {
     const client = getRedisClient();
-    if (!client || !client.isOpen) return;
+    if (!client || !client.isReady) return;
     
-    let cursor = 0;
-    do {
-      const reply = await client.scan(cursor, {
-        MATCH: pattern,
-        COUNT: 100,
-      });
-      cursor = reply.cursor;
-      const keys = reply.keys;
-      if (keys && keys.length > 0) {
-        await client.del(keys);
-      }
-    } while (cursor !== 0);
+    const keys = [];
+    for await (const key of client.scanIterator({
+      MATCH: pattern,
+      COUNT: 100,
+    })) {
+      keys.push(key);
+    }
+
+    if (keys.length > 0) {
+      await client.del(keys);
+    }
   } catch (error) {
     console.warn(`[CACHE WARNING] Failed to delete pattern "${pattern}":`, error.message);
   }

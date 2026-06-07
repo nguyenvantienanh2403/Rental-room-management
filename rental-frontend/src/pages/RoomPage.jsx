@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Plus, Loader2, Trash2, DoorOpen, Building, CheckCircle2, Maximize, Users } from "lucide-react";
+import { Pagination } from "../components/ui/Pagination";
 import { roomService } from "../services/room.service";
 import { buildingService } from "../services/building.service";
 import { RoomCard } from "../features/room/RoomCard";
@@ -15,6 +16,12 @@ export function RoomPage() {
   const [selectedBuildingId, setSelectedBuildingId] = useState("");
   const [isLoadingRooms, setIsLoadingRooms] = useState(true);
   const [isLoadingBuildings, setIsLoadingBuildings] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRoomsCount, setTotalRoomsCount] = useState(0);
+  
+  const fetchIdRef = useRef(0);
+  const prevBuildingIdRef = useRef("");
   
   // Modal States
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -54,36 +61,67 @@ export function RoomPage() {
     fetchBuildings();
   }, []);
 
-  const fetchRooms = useCallback(async () => {
-    if (!selectedBuildingId) return;
+  const fetchRooms = useCallback(async (page = 1, buildingId = selectedBuildingId) => {
+    if (!buildingId) return;
+    const currentFetchId = ++fetchIdRef.current;
     setIsLoadingRooms(true);
     try {
       let response;
-      if (selectedBuildingId === "all") {
-        response = await roomService.getAll();
+      const params = { page, limit: 8 };
+      if (buildingId === "all") {
+        response = await roomService.getAll(params);
       } else {
-        response = await roomService.getByBuilding(selectedBuildingId);
+        response = await roomService.getByBuilding(buildingId, params);
       }
       
+      if (currentFetchId !== fetchIdRef.current) return;
+
       let list = [];
-      if (Array.isArray(response)) list = response;
-      else if (response && Array.isArray(response.data)) list = response.data;
-      else if (response && Array.isArray(response.rooms)) list = response.rooms;
-      else if (response && response.data && Array.isArray(response.data.rooms)) list = response.data.rooms;
+      let totalP = 1;
+      let currP = 1;
+      let totalCount = 0;
+      
+      if (response && response.data) {
+        list = response.data.rooms || [];
+        currP = response.data.pagination?.page || 1;
+        totalP = response.data.pagination?.totalPages || 1;
+        totalCount = response.data.pagination?.totalCount || list.length;
+      } else if (response && response.rooms) {
+        list = response.rooms || [];
+        currP = response.pagination?.page || 1;
+        totalP = response.pagination?.totalPages || 1;
+        totalCount = response.pagination?.totalCount || list.length;
+      } else if (Array.isArray(response)) {
+        list = response;
+        totalCount = response.length;
+      }
       
       setRooms(list);
+      setCurrentPage(currP);
+      setTotalPages(totalP);
+      setTotalRoomsCount(totalCount);
     } catch (error) {
       toast.error("Không thể tải danh sách phòng");
     } finally {
-      setIsLoadingRooms(false);
+      if (currentFetchId === fetchIdRef.current) {
+        setIsLoadingRooms(false);
+      }
     }
   }, [selectedBuildingId]);
 
   useEffect(() => {
-    if (!isLoadingBuildings) {
-      fetchRooms();
+    if (isLoadingBuildings) return;
+    
+    // If building selection changed but currentPage has not reset to 1 yet,
+    // wait for currentPage to become 1 to avoid fetching the wrong page index.
+    if (prevBuildingIdRef.current !== selectedBuildingId && currentPage !== 1) {
+      prevBuildingIdRef.current = selectedBuildingId;
+      return;
     }
-  }, [isLoadingBuildings, selectedBuildingId, fetchRooms]);
+    prevBuildingIdRef.current = selectedBuildingId;
+
+    fetchRooms(currentPage, selectedBuildingId);
+  }, [isLoadingBuildings, selectedBuildingId, currentPage, fetchRooms]);
 
   const handleAddClick = () => {
     setSelectedRoom(null);
@@ -175,11 +213,12 @@ export function RoomPage() {
         const roomId = selectedRoom._id || selectedRoom.id;
         await roomService.update(roomId, submitData);
         toast.success("Cập nhật phòng thành công!", { id: toastId });
+        await fetchRooms(currentPage);
       } else {
         await roomService.create(submitData);
         toast.success("Thêm phòng mới thành công!", { id: toastId });
+        await fetchRooms(1);
       }
-      await fetchRooms();
       setIsFormModalOpen(false);
     } catch (error) {
       toast.error(error.response?.data?.message || "Lưu thất bại", { id: toastId });
@@ -194,7 +233,12 @@ export function RoomPage() {
     try {
       const roomId = selectedRoom._id || selectedRoom.id;
       await roomService.delete(roomId);
-      await fetchRooms();
+      
+      // Calculate target page: if last room on the page was deleted and currentPage > 1, go to previous page
+      const isLastRoomOnPage = rooms.length === 1;
+      const targetPage = (isLastRoomOnPage && currentPage > 1) ? currentPage - 1 : currentPage;
+      
+      await fetchRooms(targetPage);
       setIsDeleteModalOpen(false);
       setIsViewModalOpen(false);
       toast.success("Xóa phòng thành công!", { id: toastId });
@@ -226,7 +270,10 @@ export function RoomPage() {
           <select
             className="block w-full pl-3 pr-10 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent sm:text-sm bg-white text-slate-900 font-medium transition-colors"
             value={selectedBuildingId}
-            onChange={(e) => setSelectedBuildingId(e.target.value)}
+            onChange={(e) => {
+              setSelectedBuildingId(e.target.value);
+              setCurrentPage(1);
+            }}
             disabled={isLoadingBuildings}
           >
             {isLoadingBuildings && <option value="">Đang tải tòa nhà...</option>}
@@ -238,7 +285,7 @@ export function RoomPage() {
           </select>
         </div>
         <div className="text-sm text-slate-500 font-medium bg-slate-50 px-4 py-2 rounded-lg border border-slate-100">
-          Tổng số phòng: <strong className="text-slate-900 text-base">{rooms.length}</strong>
+          Tổng số phòng: <strong className="text-slate-900 text-base">{totalRoomsCount}</strong>
         </div>
       </div>
 
@@ -262,6 +309,14 @@ export function RoomPage() {
             />
           ))}
         </div>
+      )}
+
+      {rooms.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={(page) => setCurrentPage(page)}
+        />
       )}
 
       {/* MODAL FORM (THÊM/SỬA) */}

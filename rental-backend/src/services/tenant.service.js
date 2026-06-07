@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import { ApiError, response, checkIsAdmin } from "../utils/index.js";
+import { ApiError, response, checkIsAdmin, escapeRegExp } from "../utils/index.js";
 import { tenantRepository, roomRepository, buildingRepository } from "../repositories/index.js";
 
 const TENANT_POPULATE = [
@@ -147,13 +147,55 @@ const getAllTenantsService = async (queryOptions = {}, currentUser) => {
     filter.roomId = { $in: roomIds };
   }
 
-  const tenants = await tenantRepository.find(filter, {
-    populate: TENANT_POPULATE,
-    sort: { createdAt: -1 },
-    lean: true,
-  });
+  const { page = 1, limit = 10, search, roomId } = queryOptions;
 
-  return response(StatusCodes.OK, "Lấy danh sách tất cả khách thuê thành công", tenants);
+  if (roomId && roomId !== "all") {
+    // Nếu chọn 1 phòng cụ thể
+    // Đối với Landlord, kiểm tra xem roomId này có trong các phòng thuộc quyền quản lý không
+    if (filter.roomId) {
+      const allowedIdsStr = filter.roomId.$in.map(id => id.toString());
+      if (allowedIdsStr.includes(roomId.toString())) {
+        filter.roomId = roomId;
+      } else {
+        filter.roomId = null; // Không thuộc sở hữu
+      }
+    } else {
+      filter.roomId = roomId;
+    }
+  }
+
+  if (search) {
+    const searchRegex = new RegExp(escapeRegExp(search), 'i');
+    filter.$or = [
+      { fullName: searchRegex },
+      { phoneNumber: searchRegex },
+      { identityCard: searchRegex },
+    ];
+  }
+
+  const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+  const limitNum = parseInt(limit, 10);
+
+  const [tenants, totalCount] = await Promise.all([
+    tenantRepository.find(filter, {
+      populate: TENANT_POPULATE,
+      sort: { createdAt: -1 },
+      skip,
+      limit: limitNum,
+      lean: true,
+    }),
+    tenantRepository.countDocuments(filter),
+  ]);
+
+  return response(StatusCodes.OK, "Lấy danh sách tất cả khách thuê thành công", {
+    tenants,
+    pagination: {
+      page: parseInt(page, 10),
+      limit: limitNum,
+      totalCount,
+      totalPages: Math.ceil(totalCount / limitNum),
+    },
+  });
 };
 
 // ---------------------------------------------------------------------------

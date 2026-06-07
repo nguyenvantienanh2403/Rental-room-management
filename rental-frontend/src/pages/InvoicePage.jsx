@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Search, Loader2, Filter, Printer, Copy, AlertCircle, Save, X, Zap, Plus } from "lucide-react";
+import { Pagination } from "../components/ui/Pagination";
 import { invoiceService } from "../services/invoice.service";
 import { contractService } from "../services/contract.service";
 import { buildingService } from "../services/building.service";
@@ -21,6 +22,10 @@ export function InvoicePage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("all");
   const [selectedMonthFilter, setSelectedMonthFilter] = useState("all");
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalInvoicesCount, setTotalInvoicesCount] = useState(0);
 
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -48,43 +53,79 @@ export function InvoicePage() {
 
   const printRef = useRef(null);
 
-  const fetchInvoices = useCallback(async () => {
+  // Fetch static dependencies once
+  useEffect(() => {
+    const fetchDependencies = async () => {
+      try {
+        const [contractRes, buildingRes] = await Promise.all([
+          contractService.getAll({ status: 'active', limit: 1000 }),
+          buildingService.getAll({ limit: 1000 })
+        ]);
+        
+        const contractList = Array.isArray(contractRes) ? contractRes : (contractRes?.data?.contracts || contractRes?.data || []);
+        const buildingList = Array.isArray(buildingRes) ? buildingRes : (buildingRes?.data?.buildings || buildingRes?.data || []);
+        setBuildings(buildingList);
+        
+        const enhancedContracts = contractList.map(c => {
+          const bId = c.roomId?.buildingId?._id || c.roomId?.buildingId;
+          const b = buildingList.find(b => b._id === bId);
+          return { ...c, buildingName: b?.name || 'Tòa nhà' };
+        });
+        setContracts(enhancedContracts);
+      } catch (error) {
+        toast.error("Không thể tải dữ liệu phụ trợ");
+      }
+    };
+    fetchDependencies();
+  }, []);
+
+  const fetchInvoices = useCallback(async (page = 1) => {
     setIsLoading(true);
     try {
-      const params = {};
+      const params = { page, limit: 10, search: searchTerm };
       if (selectedStatusFilter !== "all") params.status = selectedStatusFilter;
       if (selectedMonthFilter !== "all") params.month = selectedMonthFilter;
       
-      const [invoiceRes, contractRes, buildingRes] = await Promise.all([
-        invoiceService.getAll(params),
-        contractService.getAll({ status: 'active' }),
-        buildingService.getAll()
-      ]);
+      const response = await invoiceService.getAll(params);
       
-      let list = Array.isArray(invoiceRes) ? invoiceRes : (invoiceRes?.data?.invoices || invoiceRes?.data || []);
+      let list = [];
+      let totalP = 1;
+      let currP = 1;
+      let totalCount = 0;
+      
+      if (response && response.data) {
+        list = response.data.invoices || [];
+        currP = response.data.pagination?.page || 1;
+        totalP = response.data.pagination?.totalPages || 1;
+        totalCount = response.data.pagination?.totalCount || list.length;
+      } else if (response && response.invoices) {
+        list = response.invoices || [];
+        currP = response.pagination?.page || 1;
+        totalP = response.pagination?.totalPages || 1;
+        totalCount = response.pagination?.totalCount || list.length;
+      } else if (Array.isArray(response)) {
+        list = response;
+        totalCount = response.length;
+      }
+      
       setInvoices(list);
-      
-      let contractList = Array.isArray(contractRes) ? contractRes : (contractRes?.data?.contracts || contractRes?.data || []);
-      let buildingList = Array.isArray(buildingRes) ? buildingRes : (buildingRes?.data?.buildings || buildingRes?.data || []);
-      
-      setBuildings(buildingList);
-      
-      const enhancedContracts = contractList.map(c => {
-        const bId = c.roomId?.buildingId?._id || c.roomId?.buildingId;
-        const b = buildingList.find(b => b._id === bId);
-        return { ...c, buildingName: b?.name || 'Tòa nhà' };
-      });
-      setContracts(enhancedContracts);
+      setCurrentPage(currP);
+      setTotalPages(totalP);
+      setTotalInvoicesCount(totalCount);
     } catch (error) {
       toast.error("Không thể tải danh sách hóa đơn");
     } finally {
       setIsLoading(false);
     }
-  }, [selectedStatusFilter, selectedMonthFilter]);
+  }, [selectedStatusFilter, selectedMonthFilter, searchTerm]);
 
   useEffect(() => {
-    fetchInvoices();
-  }, [fetchInvoices]);
+    const delayDebounce = setTimeout(() => {
+      fetchInvoices(currentPage);
+    }, 300);
+
+    return () => clearTimeout(delayDebounce);
+  }, [currentPage, selectedStatusFilter, selectedMonthFilter, searchTerm, fetchInvoices]);
 
   const handleViewClick = async (invoice) => {
     setIsLoading(true);
@@ -232,15 +273,7 @@ export function InvoicePage() {
     setIsCreateModalOpen(true);
   };
 
-  const filteredInvoices = useMemo(() => {
-    return invoices.filter(invoice => {
-      const term = searchTerm.toLowerCase();
-      const tenantName = (invoice.contractId?.tenantId?.fullName || '').toLowerCase();
-      const contractCode = (invoice.contractId?.contractCode || '').toLowerCase();
-      const roomName = (invoice.contractId?.roomId?.name || '').toLowerCase();
-      return tenantName.includes(term) || contractCode.includes(term) || roomName.includes(term);
-    });
-  }, [invoices, searchTerm]);
+  // Search and status/month filtering is done on the server-side now
 
   return (
     <div className="space-y-6 pb-20">
@@ -270,7 +303,10 @@ export function InvoicePage() {
               placeholder="Tên khách, Mã HĐ, Phòng..."
               className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary text-sm"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
             />
           </div>
 
@@ -279,7 +315,10 @@ export function InvoicePage() {
             <select
               className="block w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary text-sm font-medium"
               value={selectedStatusFilter}
-              onChange={(e) => setSelectedStatusFilter(e.target.value)}
+              onChange={(e) => {
+                setSelectedStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
             >
               <option value="all">Tất cả trạng thái</option>
               <option value="draft">Bản nháp</option>
@@ -292,7 +331,10 @@ export function InvoicePage() {
             <select
               className="block w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary text-sm font-medium"
               value={selectedMonthFilter}
-              onChange={(e) => setSelectedMonthFilter(e.target.value)}
+              onChange={(e) => {
+                setSelectedMonthFilter(e.target.value);
+                setCurrentPage(1);
+              }}
             >
               <option value="all">Tháng này</option>
               <option value="1">Tháng 1</option>
@@ -309,11 +351,20 @@ export function InvoicePage() {
       {isLoading ? (
         <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
       ) : (
-        <InvoiceTable 
-          invoices={filteredInvoices} 
-          onEdit={handleEditClick} 
-          onView={handleViewClick} 
-        />
+        <>
+          <InvoiceTable 
+            invoices={invoices} 
+            onView={handleViewClick} 
+            onEdit={handleEditClick} 
+          />
+          {invoices.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={(page) => setCurrentPage(page)}
+            />
+          )}
+        </>
       )}
 
       {/* VIEW & PRINT MODAL */}

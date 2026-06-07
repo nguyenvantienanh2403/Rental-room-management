@@ -4,6 +4,7 @@ import { Building, MapPin, Key, Loader2, AlertCircle, Trash2, Edit, Eye, Plus, P
 import { Card, CardContent } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Alert, AlertDescription, AlertTitle } from "../../components/ui/Alert";
+import { Pagination } from "../../components/ui/Pagination";
 import { buildingService } from "../../services/building.service";
 import toast from "react-hot-toast";
 
@@ -18,15 +19,19 @@ const TYPE_LABELS = {
 export function BuildingInfo() {
   const navigate = useNavigate();
   const [buildings, setBuildings] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const fetchBuildings = async () => {
+  const fetchBuildings = async (page = 1) => {
     try {
       setIsLoading(true);
       setError("");
-      const result = await buildingService.getAll();
+      const result = await buildingService.getAll({ page, limit: 6 });
       setBuildings(result.data?.buildings || []);
+      setCurrentPage(result.data?.pagination?.page || 1);
+      setTotalPages(result.data?.pagination?.totalPages || 1);
     } catch (err) {
       setError(err.response?.data?.message || "Không thể tải danh sách tòa nhà.");
       toast.error("Lỗi khi tải danh sách tòa nhà!");
@@ -36,8 +41,8 @@ export function BuildingInfo() {
   };
 
   useEffect(() => {
-    fetchBuildings();
-  }, []);
+    fetchBuildings(currentPage);
+  }, [currentPage]);
 
   const handleDelete = async (id) => {
     if (!window.confirm("Bạn có chắc chắn muốn xóa tòa nhà này không?")) return;
@@ -233,6 +238,14 @@ export function BuildingInfo() {
             );
           })}
         </div>
+      )}
+
+      {buildings.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={(page) => setCurrentPage(page)}
+        />
       )}
     </div>
   );

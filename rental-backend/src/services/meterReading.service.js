@@ -1,6 +1,6 @@
 import { StatusCodes } from "http-status-codes";
-import { ApiError, response } from "../utils/index.js";
-import { meterReadingRepository, invoiceRepository, contractRepository } from "../repositories/index.js";
+import { ApiError, response, escapeRegExp } from "../utils/index.js";
+import { meterReadingRepository, invoiceRepository, contractRepository, tenantRepository, roomRepository } from "../repositories/index.js";
 
 // Helper to check if invoice exists and is locked
 const checkInvoiceLock = async (contractId, month, year) => {
@@ -171,9 +171,36 @@ const deleteMeterReadingService = async (id) => {
 };
 
 const getAllMeterReadingsService = async (query = {}) => {
-  const { contractId, page = 1, limit = 10 } = query;
+  const { contractId, page = 1, limit = 10, search, month } = query;
   const filter = {};
   if (contractId) filter.contractId = contractId;
+  if (month && month !== "all") filter.month = parseInt(month, 10);
+
+  if (search) {
+    // 1. Tìm các tenants khớp tên
+    const tenants = await tenantRepository.find({
+      fullName: new RegExp(escapeRegExp(search), 'i')
+    }, { select: '_id', lean: true });
+    const tenantIds = tenants.map(t => t._id);
+
+    // 2. Tìm các rooms khớp tên
+    const rooms = await roomRepository.find({
+      name: new RegExp(escapeRegExp(search), 'i')
+    }, { select: '_id', lean: true });
+    const roomIds = rooms.map(r => r._id);
+
+    // 3. Tìm các contracts khớp các điều kiện trên hoặc khớp contractCode
+    const contracts = await contractRepository.find({
+      $or: [
+        { contractCode: new RegExp(escapeRegExp(search), 'i') },
+        { tenantId: { $in: tenantIds } },
+        { roomId: { $in: roomIds } }
+      ]
+    }, { select: '_id', lean: true });
+    const contractIds = contracts.map(c => c._id);
+
+    filter.contractId = { $in: contractIds };
+  }
 
   const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
   const limitNum = parseInt(limit, 10);

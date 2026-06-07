@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Plus, Search, Loader2, Trash2, Filter, FileText, Calendar, DollarSign, Plug, Droplets, PlusCircle, MinusCircle, User, DoorOpen } from "lucide-react";
+import { Pagination } from "../components/ui/Pagination";
 import { contractService } from "../services/contract.service";
 import { roomService } from "../services/room.service";
 import { tenantService } from "../services/tenant.service";
@@ -21,6 +22,9 @@ export function ContractPage() {
   
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalContractsCount, setTotalContractsCount] = useState(0);
 
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -67,22 +71,52 @@ export function ContractPage() {
     fetchDependencies();
   }, []);
 
-  const fetchContracts = useCallback(async () => {
+  const fetchContracts = useCallback(async (page = 1) => {
     setIsLoadingContracts(true);
     try {
-      const response = await contractService.getAll(selectedStatusFilter !== "all" ? { status: selectedStatusFilter } : {});
-      let list = Array.isArray(response) ? response : (response?.data?.contracts || response?.data || []);
+      const params = { page, limit: 10, search: searchTerm };
+      if (selectedStatusFilter !== "all") params.status = selectedStatusFilter;
+      
+      const response = await contractService.getAll(params);
+      
+      let list = [];
+      let totalP = 1;
+      let currP = 1;
+      let totalCount = 0;
+      
+      if (response && response.data) {
+        list = response.data.contracts || [];
+        currP = response.data.pagination?.page || 1;
+        totalP = response.data.pagination?.totalPages || 1;
+        totalCount = response.data.pagination?.totalCount || list.length;
+      } else if (response && response.contracts) {
+        list = response.contracts || [];
+        currP = response.pagination?.page || 1;
+        totalP = response.pagination?.totalPages || 1;
+        totalCount = response.pagination?.totalCount || list.length;
+      } else if (Array.isArray(response)) {
+        list = response;
+        totalCount = response.length;
+      }
+      
       setContracts(list);
+      setCurrentPage(currP);
+      setTotalPages(totalP);
+      setTotalContractsCount(totalCount);
     } catch (error) {
       toast.error("Không thể tải danh sách hợp đồng");
     } finally {
       setIsLoadingContracts(false);
     }
-  }, [selectedStatusFilter]);
+  }, [selectedStatusFilter, searchTerm]);
 
   useEffect(() => {
-    fetchContracts();
-  }, [fetchContracts]);
+    const delayDebounce = setTimeout(() => {
+      fetchContracts(currentPage);
+    }, 300);
+
+    return () => clearTimeout(delayDebounce);
+  }, [currentPage, selectedStatusFilter, searchTerm, fetchContracts]);
 
   // Group rooms for select dropdown
   const groupedRooms = useMemo(() => {
@@ -245,14 +279,7 @@ export function ContractPage() {
     }
   };
 
-  const filteredContracts = useMemo(() => {
-    return contracts.filter(contract => {
-      const term = searchTerm.toLowerCase();
-      const tenantName = (contract.tenantId?.fullName || '').toLowerCase();
-      const contractCode = (contract.contractCode || '').toLowerCase();
-      return tenantName.includes(term) || contractCode.includes(term);
-    });
-  }, [contracts, searchTerm]);
+  // Search and status filtering is done on the server-side now
 
   const formatMoney = (amount) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0);
@@ -281,7 +308,10 @@ export function ContractPage() {
               placeholder="Mã HĐ, Tên khách..."
               className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary text-sm"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
             />
           </div>
 
@@ -292,7 +322,10 @@ export function ContractPage() {
             <select
               className="block w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary text-sm font-medium"
               value={selectedStatusFilter}
-              onChange={(e) => setSelectedStatusFilter(e.target.value)}
+              onChange={(e) => {
+                setSelectedStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
             >
               <option value="all">Tất cả trạng thái</option>
               <option value="active">Đang hiệu lực</option>
@@ -307,10 +340,18 @@ export function ContractPage() {
         <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
       ) : (
         <ContractTable 
-          contracts={filteredContracts} 
+          contracts={contracts} 
           onEdit={handleEditClick} 
           onView={handleViewClick} 
           onDelete={handleDeleteClick} 
+        />
+      )}
+
+      {contracts.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={(page) => setCurrentPage(page)}
         />
       )}
 

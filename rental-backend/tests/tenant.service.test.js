@@ -134,11 +134,13 @@ describe("Tenant Service Unit Tests", () => {
       const mockTenants = [{ _id: "t1" }, { _id: "t2" }];
 
       mock.method(tenantRepository, "find", async () => mockTenants);
+      mock.method(tenantRepository, "countDocuments", async () => 2);
 
       const res = await getAllTenantsService({}, currentUser);
 
       assert.strictEqual(res.statusCode, 200);
-      assert.strictEqual(res.data.length, 2);
+      assert.strictEqual(res.data.tenants.length, 2);
+      assert.strictEqual(res.data.pagination.totalCount, 2);
     });
 
     it("should retrieve only own tenants for landlord", async () => {
@@ -150,11 +152,13 @@ describe("Tenant Service Unit Tests", () => {
       mock.method(buildingRepository, "find", async () => mockBuildings);
       mock.method(roomRepository, "find", async () => mockRooms);
       mock.method(tenantRepository, "find", async () => mockTenants);
+      mock.method(tenantRepository, "countDocuments", async () => 1);
 
       const res = await getAllTenantsService({}, currentUser);
 
       assert.strictEqual(res.statusCode, 200);
-      assert.strictEqual(res.data.length, 1);
+      assert.strictEqual(res.data.tenants.length, 1);
+      assert.strictEqual(res.data.pagination.totalCount, 1);
     });
   });
 

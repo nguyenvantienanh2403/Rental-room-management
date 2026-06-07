@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { StatusCodes } from "http-status-codes";
-import { ApiError, response } from "../utils/index.js";
+import { ApiError, response, escapeRegExp } from "../utils/index.js";
 import { contractRepository, roomRepository, tenantRepository } from "../repositories/index.js";
 
 const CONTRACT_POPULATE = [
@@ -95,7 +95,7 @@ const createContractService = async (contractData) => {
 // GET ALL CONTRACTS (With Pagination & Filters)
 // ---------------------------------------------------------------------------
 const getAllContractsService = async (query = {}) => {
-  const { page = 1, limit = 10, status, roomId, tenantId } = query;
+  const { page = 1, limit = 10, status, roomId, tenantId, search } = query;
 
   const filter = {};
 
@@ -104,6 +104,17 @@ const getAllContractsService = async (query = {}) => {
   }
   if (roomId) filter.roomId = roomId;
   if (tenantId) filter.tenantId = tenantId;
+
+  if (search) {
+    const tenants = await tenantRepository.find({
+      fullName: new RegExp(escapeRegExp(search), 'i')
+    }, { select: '_id', lean: true });
+    const tenantIds = tenants.map(t => t._id);
+    filter.$or = [
+      { contractCode: new RegExp(escapeRegExp(search), 'i') },
+      { tenantId: { $in: tenantIds } }
+    ];
+  }
 
   const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
   const limitNum = parseInt(limit, 10);

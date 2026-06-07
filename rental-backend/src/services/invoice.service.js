@@ -1,12 +1,13 @@
 import mongoose from "mongoose";
 import { StatusCodes } from "http-status-codes";
-import { ApiError, response } from "../utils/index.js";
+import { ApiError, response, escapeRegExp } from "../utils/index.js";
 import {
   invoiceRepository,
   contractRepository,
   meterReadingRepository,
   tenantRepository,
   notificationRepository,
+  roomRepository,
 } from "../repositories/index.js";
 
 const INVOICE_POPULATE = [
@@ -182,9 +183,11 @@ const createInvoiceService = async (invoiceData) => {
     });
 
     // Bắn thông báo NEW_INVOICE
-    const landlordId = populatedInvoice.contractId?.roomId?.buildingId?.landlordId;
+    const landlord = populatedInvoice.contractId?.roomId?.buildingId?.landlordId;
+    const landlordId = landlord?._id || landlord;
     const roomName = populatedInvoice.contractId?.roomId?.name;
-    const tenantUserId = populatedInvoice.contractId?.tenantId?.userId;
+    const tenant = populatedInvoice.contractId?.tenantId?.userId;
+    const tenantUserId = tenant?._id || tenant;
     
     const notificationsToCreate = [];
 
@@ -332,9 +335,11 @@ const updateInvoiceStatusService = async (invoiceId, newStatus) => {
 
   // Bắn thông báo INVOICE_PAID nếu trạng thái là paid
   if (newStatus === "paid") {
-    const landlordId = updatedInvoice.contractId?.roomId?.buildingId?.landlordId;
+    const landlord = updatedInvoice.contractId?.roomId?.buildingId?.landlordId;
+    const landlordId = landlord?._id || landlord;
     const roomName = updatedInvoice.contractId?.roomId?.name;
-    const tenantUserId = updatedInvoice.contractId?.tenantId?.userId;
+    const tenant = updatedInvoice.contractId?.tenantId?.userId;
+    const tenantUserId = tenant?._id || tenant;
     
     const notificationsToCreate = [];
 
@@ -370,17 +375,40 @@ const updateInvoiceStatusService = async (invoiceId, newStatus) => {
   );
 };
 
-// ---------------------------------------------------------------------------
-// GET ALL INVOICES
-// ---------------------------------------------------------------------------
 const getAllInvoicesService = async (query = {}) => {
-  const { page = 1, limit = 10, status, contractId, month, year } = query;
+  const { page = 1, limit = 10, status, contractId, month, year, search } = query;
 
   const filter = {};
   if (status) filter.status = status;
   if (contractId) filter.contractId = contractId;
   if (month) filter.month = month;
   if (year) filter.year = year;
+
+  if (search) {
+    // 1. Tìm các tenants khớp tên
+    const tenants = await tenantRepository.find({
+      fullName: new RegExp(escapeRegExp(search), 'i')
+    }, { select: '_id', lean: true });
+    const tenantIds = tenants.map(t => t._id);
+
+    // 2. Tìm các rooms khớp tên
+    const rooms = await roomRepository.find({
+      name: new RegExp(escapeRegExp(search), 'i')
+    }, { select: '_id', lean: true });
+    const roomIds = rooms.map(r => r._id);
+
+    // 3. Tìm các contracts khớp các điều kiện trên hoặc khớp contractCode
+    const contracts = await contractRepository.find({
+      $or: [
+        { contractCode: new RegExp(escapeRegExp(search), 'i') },
+        { tenantId: { $in: tenantIds } },
+        { roomId: { $in: roomIds } }
+      ]
+    }, { select: '_id', lean: true });
+    const contractIds = contracts.map(c => c._id);
+
+    filter.contractId = { $in: contractIds };
+  }
 
   const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
   const limitNum = parseInt(limit, 10);

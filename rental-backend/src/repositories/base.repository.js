@@ -4,7 +4,17 @@ class BaseRepository {
   }
 
   async create(data, options = {}) {
-    return this.model.create(Array.isArray(data) ? data : [data], options).then(res => Array.isArray(data) ? res : res[0]);
+    const isArray = Array.isArray(data);
+    const payload = isArray ? data : [data];
+    const createOptions = { ...options };
+
+    // Mongoose requires ordered:true when bulk creating inside a transaction session
+    if (isArray && options.session) {
+      createOptions.ordered = true;
+    }
+
+    const result = await this.model.create(payload, createOptions);
+    return isArray ? result : result[0];
   }
 
   async findById(id, options = {}) {

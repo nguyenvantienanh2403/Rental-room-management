@@ -5,22 +5,21 @@ const tenantSchema = new Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
     },
     fullName: {
       type: String,
-      required: true,
+      required: [true, "Họ và tên khách thuê là bắt buộc"],
       trim: true,
     },
     identityCard: {
       type: String,
-      required: true,
+      required: [true, "Căn cước công dân là bắt buộc"],
       unique: true,
       trim: true,
     },
     phoneNumber: {
       type: String,
-      required: true,
+      required: [true, "Số điện thoại khách thuê là bắt buộc"],
       trim: true,
     },
     email: {
@@ -30,13 +29,13 @@ const tenantSchema = new Schema(
     },
     homeTown: {
       type: String,
-      required: true,
+      required: [true, "Quê quán khách thuê là bắt buộc"],
       trim: true,
     },
     roomId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Room",
-      required: true,
+      required: [true, "ID phòng thuê là bắt buộc"],
     },
     status: {
       type: String,
