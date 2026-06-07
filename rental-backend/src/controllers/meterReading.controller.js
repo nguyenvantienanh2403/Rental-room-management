@@ -1,6 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 import { catchAsync } from "../utils/index.js";
 import { meterReadingService } from "../services/index.js";
+import { tenantModel, contractModel } from "../models/index.js";
 
 const createMeterReading = catchAsync(async (req, res) => {
   const result = await meterReadingService.createMeterReadingService(req.body);
@@ -21,9 +22,6 @@ const deleteMeterReading = catchAsync(async (req, res) => {
   const result = await meterReadingService.deleteMeterReadingService(id);
   res.status(StatusCodes.OK).json(result);
 });
-
-import tenantModel from "../models/tenant.model.js";
-import contractModel from "../models/contract.model.js";
 
 const getAllMeterReadings = catchAsync(async (req, res) => {
   let query = { ...req.query };

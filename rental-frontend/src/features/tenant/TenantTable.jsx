@@ -94,6 +94,7 @@ export function TenantTable({ tenants, onEdit, onView, onDelete }) {
                           onClick={() => onView(tenant)} 
                           className="p-2 text-slate-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors cursor-pointer" 
                           title="Xem chi tiết"
+                          aria-label="Xem chi tiết khách thuê"
                         >
                           <Eye className="h-4 w-4" />
                         </button>
@@ -101,6 +102,7 @@ export function TenantTable({ tenants, onEdit, onView, onDelete }) {
                           onClick={() => onEdit(tenant)} 
                           className="p-2 text-slate-500 hover:text-tertiary hover:bg-tertiary/10 rounded-lg transition-colors cursor-pointer" 
                           title="Chỉnh sửa"
+                          aria-label="Chỉnh sửa thông tin khách thuê"
                         >
                           <Edit className="h-4 w-4" />
                         </button>
@@ -108,6 +110,7 @@ export function TenantTable({ tenants, onEdit, onView, onDelete }) {
                           onClick={() => onDelete(tenant)} 
                           className="p-2 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer" 
                           title="Xóa"
+                          aria-label="Xóa khách thuê"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>

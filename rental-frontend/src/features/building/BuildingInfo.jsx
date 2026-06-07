@@ -79,7 +79,7 @@ export function BuildingInfo() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-end">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-slate-900">Quản lý Tòa nhà</h2>
           <p className="text-slate-500">Xem và quản lý thông tin chi tiết của các tòa nhà.</p>
@@ -206,6 +206,7 @@ export function BuildingInfo() {
                         onClick={() => navigate(`/buildings/${building._id}`)}
                         className="p-2 text-slate-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
                         title="Xem chi tiết"
+                        aria-label="Xem chi tiết tòa nhà"
                       >
                         <Eye className="h-4 w-4" />
                       </button>
@@ -213,6 +214,7 @@ export function BuildingInfo() {
                         onClick={() => navigate(`/buildings/${building._id}/edit`)}
                         className="p-2 text-slate-500 hover:text-tertiary hover:bg-tertiary/10 rounded-lg transition-colors"
                         title="Chỉnh sửa"
+                        aria-label="Chỉnh sửa tòa nhà"
                       >
                         <Edit className="h-4 w-4" />
                       </button>
@@ -220,6 +222,7 @@ export function BuildingInfo() {
                         onClick={() => handleDelete(building._id)}
                         className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         title="Xóa tòa nhà"
+                        aria-label="Xóa tòa nhà"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>

@@ -71,6 +71,7 @@ export function MainLayout() {
           <button 
             onClick={() => setIsMobileMenuOpen(false)}
             className="md:hidden text-neutral-foreground hover:text-tertiary transition-colors"
+            aria-label="Đóng menu"
           >
             <X className="h-6 w-6" />
           </button>
@@ -106,6 +107,7 @@ export function MainLayout() {
             <button 
               onClick={() => setIsMobileMenuOpen(true)}
               className="p-2 -ml-2 text-slate-600 hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 rounded-lg"
+              aria-label="Mở menu"
             >
               <Menu className="h-6 w-6" />
             </button>
@@ -124,6 +126,7 @@ export function MainLayout() {
               onClick={() => navigate("/")}
               className="p-2 bg-slate-50 rounded-full border border-slate-200 text-slate-600 hover:text-primary transition-colors relative"
               title="Về trang chủ RentalMarket"
+              aria-label="Trở về trang chủ"
             >
               <Home className="w-5 h-5" />
             </button>

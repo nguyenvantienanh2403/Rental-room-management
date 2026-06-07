@@ -1,10 +1,9 @@
 import { StatusCodes } from "http-status-codes";
-import { ApiError, catchAsync, jwt_utils, response, sendEmail } from "../utils/index.js";
-import { userModel, token } from "../models/index.js";
+import { ApiError, catchAsync, response, sendEmail } from "../utils/index.js";
+import { userModel } from "../models/index.js";
 import env from "../config/env.config.js";
 import { authService } from "../services/index.js";
 import crypto from "crypto";
-import bcrypt from "bcrypt";
 
 const register = catchAsync(async (req, res, next) => {
   const { username, email, password } = req.body;

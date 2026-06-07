@@ -94,6 +94,7 @@ export function ContractTable({ contracts, onView, onEdit, onDelete }) {
                       onClick={() => onView(contract)}
                       className="text-slate-400 hover:text-primary hover:bg-primary/5 h-8 w-8 p-0"
                       title="Xem chi tiết"
+                      aria-label="Xem chi tiết hợp đồng"
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
@@ -103,6 +104,7 @@ export function ContractTable({ contracts, onView, onEdit, onDelete }) {
                       onClick={() => onEdit(contract)}
                       className="text-slate-400 hover:text-amber-500 hover:bg-amber-50 h-8 w-8 p-0"
                       title="Chỉnh sửa"
+                      aria-label="Chỉnh sửa hợp đồng"
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -112,6 +114,7 @@ export function ContractTable({ contracts, onView, onEdit, onDelete }) {
                       onClick={() => onDelete(contract)}
                       className="text-slate-400 hover:text-red-500 hover:bg-red-50 h-8 w-8 p-0"
                       title="Xóa"
+                      aria-label="Xóa hợp đồng"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

@@ -245,12 +245,14 @@ export function ContractPage() {
     }
   };
 
-  const filteredContracts = contracts.filter(contract => {
-    const term = searchTerm.toLowerCase();
-    const tenantName = (contract.tenantId?.fullName || '').toLowerCase();
-    const contractCode = (contract.contractCode || '').toLowerCase();
-    return tenantName.includes(term) || contractCode.includes(term);
-  });
+  const filteredContracts = useMemo(() => {
+    return contracts.filter(contract => {
+      const term = searchTerm.toLowerCase();
+      const tenantName = (contract.tenantId?.fullName || '').toLowerCase();
+      const contractCode = (contract.contractCode || '').toLowerCase();
+      return tenantName.includes(term) || contractCode.includes(term);
+    });
+  }, [contracts, searchTerm]);
 
   const formatMoney = (amount) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0);

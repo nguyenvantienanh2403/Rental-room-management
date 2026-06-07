@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Search, Loader2, Filter, Printer, Copy, AlertCircle, Save, X, Zap, Plus } from "lucide-react";
 import { invoiceService } from "../services/invoice.service";
 import { contractService } from "../services/contract.service";
@@ -232,13 +232,15 @@ export function InvoicePage() {
     setIsCreateModalOpen(true);
   };
 
-  const filteredInvoices = invoices.filter(invoice => {
-    const term = searchTerm.toLowerCase();
-    const tenantName = (invoice.contractId?.tenantId?.fullName || '').toLowerCase();
-    const contractCode = (invoice.contractId?.contractCode || '').toLowerCase();
-    const roomName = (invoice.contractId?.roomId?.name || '').toLowerCase();
-    return tenantName.includes(term) || contractCode.includes(term) || roomName.includes(term);
-  });
+  const filteredInvoices = useMemo(() => {
+    return invoices.filter(invoice => {
+      const term = searchTerm.toLowerCase();
+      const tenantName = (invoice.contractId?.tenantId?.fullName || '').toLowerCase();
+      const contractCode = (invoice.contractId?.contractCode || '').toLowerCase();
+      const roomName = (invoice.contractId?.roomId?.name || '').toLowerCase();
+      return tenantName.includes(term) || contractCode.includes(term) || roomName.includes(term);
+    });
+  }, [invoices, searchTerm]);
 
   return (
     <div className="space-y-6 pb-20">
@@ -248,10 +250,10 @@ export function InvoicePage() {
           <p className="text-slate-500">Quản lý và theo dõi trạng thái thanh toán.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={() => setIsBulkModalOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white border-none shadow-sm flex items-center gap-2">
+          <Button onClick={() => setIsBulkModalOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-neutral-foreground border-none shadow-sm flex items-center gap-2">
             <Zap className="h-4 w-4" /> Tạo Hàng Loạt
           </Button>
-          <Button onClick={handleAddNew} className="bg-primary hover:bg-primary-hover text-white border-none shadow-sm flex items-center gap-2">
+          <Button onClick={handleAddNew} className="bg-primary hover:bg-primary-hover text-neutral-foreground border-none shadow-sm flex items-center gap-2">
             <Plus className="h-4 w-4" /> Tạo Hóa Đơn
           </Button>
         </div>

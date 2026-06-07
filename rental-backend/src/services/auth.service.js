@@ -57,7 +57,7 @@ const loginService = async (email, password, res) => {
     httpOnly: true, // only accessible by the server
     secure: env.server.nodeEnv === "production", // only send over HTTPS in production
     sameSite: env.server.nodeEnv === "production" ? "None" : "Lax", // allow cross-site cookies in production
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    maxAge: env.jwt.refreshTokenTtlMs, // 7 days
   });
 
   const userResponse = user.toObject();

@@ -1,6 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 import { catchAsync } from "../utils/index.js";
 import { invoiceService } from "../services/index.js";
+import { tenantModel, contractModel } from "../models/index.js";
 
 const createInvoice = catchAsync(async (req, res) => {
   const result = await invoiceService.createInvoiceService(req.body);
@@ -19,9 +20,6 @@ const updateInvoiceStatus = catchAsync(async (req, res) => {
   const result = await invoiceService.updateInvoiceStatusService(id, status);
   res.status(StatusCodes.OK).json(result);
 });
-
-import tenantModel from "../models/tenant.model.js";
-import contractModel from "../models/contract.model.js";
 
 const getAllInvoices = catchAsync(async (req, res) => {
   let query = { ...req.query };

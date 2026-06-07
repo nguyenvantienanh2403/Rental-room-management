@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Search, Loader2, Filter, Plus, FileText, Zap, Droplets } from "lucide-react";
 import { meterReadingService } from "../services/meterReading.service";
 import { contractService } from "../services/contract.service";
@@ -233,17 +233,19 @@ export function MeterReadingPage() {
   };
 
   // Lọc dữ liệu
-  const filteredReadings = readings.filter(r => {
-    const term = searchTerm.toLowerCase();
-    const tenantName = (r.contractData?.tenantId?.fullName || '').toLowerCase();
-    const contractCode = (r.contractData?.contractCode || '').toLowerCase();
-    const roomName = (r.contractData?.roomId?.name || '').toLowerCase();
-    
-    const matchSearch = tenantName.includes(term) || contractCode.includes(term) || roomName.includes(term);
-    const matchMonth = selectedMonthFilter === "all" || r.month.toString() === selectedMonthFilter;
-    
-    return matchSearch && matchMonth;
-  });
+  const filteredReadings = useMemo(() => {
+    return readings.filter(r => {
+      const term = searchTerm.toLowerCase();
+      const tenantName = (r.contractData?.tenantId?.fullName || '').toLowerCase();
+      const contractCode = (r.contractData?.contractCode || '').toLowerCase();
+      const roomName = (r.contractData?.roomId?.name || '').toLowerCase();
+      
+      const matchSearch = tenantName.includes(term) || contractCode.includes(term) || roomName.includes(term);
+      const matchMonth = selectedMonthFilter === "all" || r.month.toString() === selectedMonthFilter;
+      
+      return matchSearch && matchMonth;
+    });
+  }, [readings, searchTerm, selectedMonthFilter]);
 
   return (
     <div className="space-y-6 pb-20">
@@ -253,10 +255,10 @@ export function MeterReadingPage() {
           <p className="text-slate-500">Chốt chỉ số điện nước hàng tháng cho các phòng.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={() => setIsBulkModalOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white border-none shadow-sm flex items-center gap-2">
+          <Button onClick={() => setIsBulkModalOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-neutral-foreground border-none shadow-sm flex items-center gap-2">
             <Zap className="h-4 w-4" /> Ghi Hàng Loạt
           </Button>
-          <Button onClick={handleAddNew} className="bg-primary hover:bg-primary-hover text-white border-none shadow-sm flex items-center gap-2">
+          <Button onClick={handleAddNew} className="bg-primary hover:bg-primary-hover text-neutral-foreground border-none shadow-sm flex items-center gap-2">
             <Plus className="h-4 w-4" /> Ghi Lẻ
           </Button>
         </div>

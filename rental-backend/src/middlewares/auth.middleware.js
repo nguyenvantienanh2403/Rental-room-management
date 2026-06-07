@@ -1,5 +1,4 @@
 import { StatusCodes } from "http-status-codes";
-import jwt from "jsonwebtoken";
 import { ApiError, catchAsync, jwt_utils } from "../utils/index.js";
 import { userModel } from "../models/index.js";
 

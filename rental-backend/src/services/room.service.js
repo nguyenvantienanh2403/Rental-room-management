@@ -1,7 +1,7 @@
 import { StatusCodes } from "http-status-codes";
-import { ApiError, response } from "../utils/index.js";
+import { ApiError, response, checkIsAdmin } from "../utils/index.js";
 import { roomModel, buildingModel } from "../models/index.js";
-import { ROLES } from "../constants/index.js";
+import { uploadToCloudinary } from "./upload.service.js";
 
 const ROOM_POPULATE = [
   {
@@ -14,12 +14,6 @@ const ROOM_POPULATE = [
     select: "fullName identityCard phoneNumber homeTown",
   },
 ];
-
-const checkIsAdmin = (user) => {
-  if (!user || !user.role) return false;
-  const roleName = typeof user.role === 'object' ? user.role.name : user.role;
-  return roleName?.toLowerCase() === ROLES.ADMIN;
-};
 
 // Hàm tiện ích: Lấy tất cả ID tòa nhà của một Landlord
 const getLandlordBuildingIds = async (landlordId) => {
@@ -259,7 +253,7 @@ const uploadRoomImagesService = async (files) => {
   }
 
   const uploadPromises = files.map(file => 
-    import("./upload.service.js").then(m => m.uploadToCloudinary(
+    uploadToCloudinary(
       file.buffer,
       "rental-app/rooms",
       {
@@ -268,7 +262,7 @@ const uploadRoomImagesService = async (files) => {
           { quality: "auto", fetch_format: "auto" },
         ],
       }
-    ))
+    )
   );
 
   const results = await Promise.all(uploadPromises);

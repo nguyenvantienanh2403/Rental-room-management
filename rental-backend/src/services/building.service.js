@@ -1,7 +1,6 @@
 import { StatusCodes } from "http-status-codes";
-import { ApiError, response, escapeRegExp } from "../utils/index.js";
+import { ApiError, response, escapeRegExp, checkIsAdmin } from "../utils/index.js";
 import { buildingModel } from "../models/index.js";
-import { ROLES } from "../constants/index.js";
 
 /**
  * Populate options cho building queries
@@ -12,12 +11,6 @@ const BUILDING_POPULATE = [
     select: "username email avatar slug",
   },
 ];
-
-const checkIsAdmin = (user) => {
-  if (!user || !user.role) return false;
-  const roleName = typeof user.role === 'object' ? user.role.name : user.role;
-  return roleName?.toLowerCase() === ROLES.ADMIN;
-};
 
 // ---------------------------------------------------------------------------
 // CREATE BUILDING

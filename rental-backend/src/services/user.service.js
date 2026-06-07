@@ -1,7 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 import bcrypt from "bcrypt";
 import { ApiError, response, escapeRegExp } from "../utils/index.js";
-import { userModel } from "../models/index.js";
+import { userModel, roleModel } from "../models/index.js";
 import env from "../config/env.config.js";
 import sendEmail from "../utils/sendEmail.js";
 import crypto from "crypto";
@@ -355,9 +355,9 @@ const createLandlordService = async (userData) => {
   }
 
   // Lấy role landlord từ DB
-  let landlordRole = await import("../models/index.js").then(m => m.roleModel.findOne({ name: "landlord" }));
+  let landlordRole = await roleModel.findOne({ name: "landlord" });
   if (!landlordRole) {
-    landlordRole = await import("../models/index.js").then(m => m.roleModel.create({ name: "landlord", permissions: [] }));
+    landlordRole = await roleModel.create({ name: "landlord", permissions: [] });
   }
 
   const newUser = await userModel.create({

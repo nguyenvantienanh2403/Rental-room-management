@@ -1,13 +1,6 @@
 import { StatusCodes } from "http-status-codes";
-import { ApiError, response } from "../utils/index.js";
+import { response, checkIsAdmin } from "../utils/index.js";
 import { buildingModel, roomModel, invoiceModel, contractModel } from "../models/index.js";
-import { ROLES } from "../constants/index.js";
-
-const checkIsAdmin = (user) => {
-  if (!user || !user.role) return false;
-  const roleName = typeof user.role === 'object' ? user.role.name : user.role;
-  return roleName?.toLowerCase() === ROLES.ADMIN;
-};
 
 const getOverviewService = async (currentUser) => {
   const today = new Date();

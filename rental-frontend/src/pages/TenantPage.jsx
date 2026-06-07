@@ -178,12 +178,14 @@ export function TenantPage() {
   };
 
   // Filter Data locally by Search term
-  const filteredTenants = tenants.filter(tenant => {
-    const term = searchTerm.toLowerCase();
-    return (tenant.fullName || '').toLowerCase().includes(term) || 
-           (tenant.identityCard || '').includes(searchTerm) ||
-           (tenant.phoneNumber || '').includes(searchTerm);
-  });
+  const filteredTenants = useMemo(() => {
+    return tenants.filter(tenant => {
+      const term = searchTerm.toLowerCase();
+      return (tenant.fullName || '').toLowerCase().includes(term) || 
+             (tenant.identityCard || '').includes(searchTerm) ||
+             (tenant.phoneNumber || '').includes(searchTerm);
+    });
+  }, [tenants, searchTerm]);
 
   return (
     <div className="space-y-6">

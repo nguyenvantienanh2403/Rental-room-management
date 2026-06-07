@@ -1,7 +1,6 @@
 import { StatusCodes } from "http-status-codes";
-import { ApiError, response } from "../utils/index.js";
+import { ApiError, response, checkIsAdmin } from "../utils/index.js";
 import { tenantModel, roomModel, buildingModel } from "../models/index.js";
-import { ROLES } from "../constants/index.js";
 
 const TENANT_POPULATE = [
   {
@@ -13,12 +12,6 @@ const TENANT_POPULATE = [
     },
   },
 ];
-
-const checkIsAdmin = (user) => {
-  if (!user || !user.role) return false;
-  const roleName = typeof user.role === 'object' ? user.role.name : user.role;
-  return roleName?.toLowerCase() === ROLES.ADMIN;
-};
 
 // Hàm tiện ích: Kiểm tra quyền sở hữu phòng (thông qua tòa nhà)
 const verifyRoomOwnership = async (roomId, currentUser) => {
@@ -47,6 +40,12 @@ const rentRoomService = async (roomId, currentUser) => {
   const roleName = typeof currentUser.role === 'object' ? currentUser.role?.name : currentUser.role;
   if (roleName && roleName.toLowerCase() !== "user") {
     throw new ApiError(StatusCodes.FORBIDDEN, "Tài khoản quản trị hoặc chủ trọ không thể thuê phòng trực tuyến");
+  }
+
+  // Kiểm tra xem người dùng hiện tại đã đang thuê một phòng khác chưa
+  const activeTenant = await tenantModel.findOne({ userId: currentUser._id, status: "active" });
+  if (activeTenant) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Bạn đang thuê một phòng khác. Vui lòng trả phòng hiện tại trước.");
   }
 
   // Check if room exists and is available

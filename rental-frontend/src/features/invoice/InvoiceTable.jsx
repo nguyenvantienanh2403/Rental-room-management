@@ -101,6 +101,7 @@ export function InvoiceTable({ invoices, onView, onEdit }) {
                       onClick={() => onView(invoice)}
                       className="text-slate-400 hover:text-primary hover:bg-primary/5 h-8 w-8 p-0"
                       title="Xem chi tiết / Xuất HĐ"
+                      aria-label="Xem chi tiết và xuất hóa đơn"
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
@@ -111,6 +112,7 @@ export function InvoiceTable({ invoices, onView, onEdit }) {
                       className="text-slate-400 hover:text-amber-500 hover:bg-amber-50 h-8 w-8 p-0"
                       title="Chỉnh sửa"
                       disabled={invoice.status === 'paid'}
+                      aria-label="Chỉnh sửa hóa đơn"
                     >
                       <Edit className="h-4 w-4" />
                     </Button>

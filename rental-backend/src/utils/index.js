@@ -5,6 +5,7 @@ import jwt_utils from "./jwt-utils.js";
 import queryfeatures from "./queryFeature.js";
 import sendEmail from "./sendEmail.js";
 import escapeRegExp from "./escapeRegExp.js";
+import { checkIsAdmin } from "./role.utils.js";
 
-export { ApiError, catchAsync, response, jwt_utils, queryfeatures, sendEmail, escapeRegExp };
+export { ApiError, catchAsync, response, jwt_utils, queryfeatures, sendEmail, escapeRegExp, checkIsAdmin };
 
